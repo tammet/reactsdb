@@ -1,0 +1,78 @@
+
+.normaltext {
+  font-size: 13px; 	
+}
+
+.btn {
+	  box-shadow:none !important;
+  -webkit-border-radius: 0 !important;
+     -moz-border-radius: 0 !important;
+          border-radius: 0 !important;
+}
+
+.navbar-logo {
+  padding-top: 8px;
+  margin-right: 10px;  
+  margin-left: 10px;  
+  padding-right: 15px; 
+}
+
+.navbar-logo-image {
+  padding-right: 15px;  
+}
+
+.navbar-logo-text {
+  font-size: 16px; 	
+  font-weight: bold;
+  color: white;
+}
+
+.navbar-logo a:hover{
+  text-decoration: none;
+  color: white;
+}
+
+.navbar-btn-link {
+  /* font-weight: bold; */
+  color: #ddd;
+}
+
+.navbar .nav > li > a {
+    float: none;
+    color: #fff;
+    border-radius: 0px;
+}
+
+.navbar .nav > li > a:hover {
+    float: none;
+    color: #fff;
+    background-color: #555;
+}
+
+#map_canvas {
+  position: absolute;   
+}
+
+.mappos1 {
+  top:42px;
+  left: 0px; right: 0px; bottom: 0px;
+}
+
+
+#onload_info_inner { 
+  z-index: 2;
+  width: 300px;
+  height: 250px;
+  background: #151515;
+  border-radius: 20px;
+  padding: 20px;
+  margin: 100px auto;
+  color: #dddddd;
+  box-shadow: 0 0 40px #222;
+  opacity: 0.8;
+}
+
+
+
+
+
