@@ -46,7 +46,7 @@ function initMain() {
   loadTemplates();
   initReact(globalState);   
   setupHistory();
-  loadScripts();
+  //loadScripts();
   finishInit() ;
   //menuOverview();    
   //menuMap();
@@ -59,9 +59,11 @@ function initMain() {
 
 
 function loadScripts() {
+  /*
   if (!globalState.maploaded) {
     $.getScript("http://maps.google.com/maps/api/js?key=AIzaSyD-xtJhhO8m0-lE_GLOHMSzruZAB8kUhVQ&callback=mapLoaded");
-  }  
+  } 
+  */ 
 }
 
 function mapLoaded() {

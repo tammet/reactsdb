@@ -40,9 +40,10 @@ Try from the browser with cgi parameters:
 
 and using curl and posted json:
 
-    curl 'http://127.0.0.1:5000/api' -d '{"op":"list", "table":"users", "token":"test"}'  
+    curl 'http://127.0.0.1:5000/api' -d '{"op":"list", "table":"users", "token":"test"}'      
 
 Both tests should produce a few rows of the users table data in the json format.
+You should also see output in the logfile /tmp/reactsdblog.
 
 Third, try out the html UI in your browser, served by flask:
 
@@ -53,7 +54,11 @@ You should see a login page. Enter arbitrary username and password, click "Demo 
 You should now see a simple page with a small left menu. The "Users" selection should function.
 Editing users should be possible, adding currently not.
 
+In case your api does not run on the url indicated before, please change 
+these rows in the js/data.js file accordingly:
 
+  "apiUrl": "http://127.0.0.1:5000/api", // normally used by api for fetching/storing data with a proxy 
+  "localApiUrl": "http://127.0.0.1:5000/api",
 
 
 
