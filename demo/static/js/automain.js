@@ -819,7 +819,7 @@ var AutoSimpleMenu = React.createClass({
   }, 
   render: function() { 
     var viewdef=this.props.viewdef;
-    var menuitems=['users','locations','checkins','sessions'];  
+    var menuitems=['users','tabbed users','locations','checkins','sessions'];  
     if (!menuitems) return "";     
     var menuitem,menulabel,menuclass;
     var menuBlocks = [];
