@@ -61,5 +61,5 @@ these rows in the js/data.js file accordingly:
     "apiUrl": "http://127.0.0.1:5000/api", // normally used by api for fetching/storing data with a proxy 
     "localApiUrl": "http://127.0.0.1:5000/api",
 
-
+The next place to explore is the viewdefs.js file: this defines how and what is shown on listings and record pages.
 
