@@ -8,14 +8,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 
-<meta name="description" content="autoreact demo">
+<meta name="description" content="reactsdb demo">
 <meta name="keywords" content="reactjs">
 
 <meta itemprop="itemtype" content="http://schema.org/SoftwareApplication">
-<meta itemprop="name" content="autoreact demo">
-<meta itemprop="description" content="autoreact demo">
+<meta itemprop="name" content="reactsdb demo">
+<meta itemprop="description" content="reactsdb demo">
 
-<title id="title">gtour admin</title>
+<title id="title">reactsdb</title>
 
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
 <link rel="stylesheet" type="text/css" href="css/datepicker.css">
@@ -27,15 +27,10 @@
 body {  
   background-color: #f9f9fb;
   font-family:  'Open Sans',Arial,Helvetica,sans-serif;
-  /* background: url("img/20_1000.jpg") no-repeat center center fixed;  */
-  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover;
-  background-size: cover;  
 }
 
 .login-warning {
-  color-red;
+  color: red;
 }
 
 .container-narrow {
@@ -46,9 +41,13 @@ body {
   margin: 30px 0;
 }
 
-#map_canvas label { width: auto; display:inline; }  /* fix for bootstrap and maps */
-#map_canvas img { max-width: 999999px; max-height: 999999px; } /* fix for bootstrap and maps */
-
+#addModal {
+  margin-top: 20px;  
+  border-radius: 0px;
+} 
+#problem  {
+  height: 150px;
+}
 @media screen and (max-device-height: 799px) {
   .modal-dialog {
     height: 0px !important;
@@ -63,30 +62,8 @@ body {
     height: 50px;
   }
 } 
-@media not (screen and (max-device-height: 799px)) {
-  #addModal {
-    margin-top: 20px;  
-    border-radius: 0px;
-  } 
-  #problem  {
-    height: 150px;
-  }
-}  
 </style>
 
-<script>
-// configuration
-//var send_url="http://localhost/cgi-bin/gtour/t_send"
-//var ask_url="http://localhost/cgi-bin/gtour/t_ask"
-var send_url="/cgi-bin/send"
-var ask_url="/cgi-bin/ask"
-
-var DEFAULT_MAP_CENTER_LAT=58.87;
-var DEFAULT_MAP_CENTER_LNG=25.41;
-var DEFAULT_INITIAL_ZOOM=8;
-</script>
-
-<!-- <script src="https://www.google.com/recaptcha/api.js"></script> -->
 
 </head> 
 <body itemscope itemtype="http://schema.org/WebPage" id="body">
@@ -112,7 +89,8 @@ var DEFAULT_INITIAL_ZOOM=8;
 
 <div class="main-page" id="main-page" style="display:none">
 
-<div class="navbar navbar-inverse navbar-static-top" style="background-color: #333; border-color: #333, margin-bottom:0;">
+<div class="navbar navbar-inverse navbar-static-top" 
+    style="background-color: #333; border-color: #333; margin-bottom: 0">
   <div class="container">
     <div class="navbar-header">
       <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">

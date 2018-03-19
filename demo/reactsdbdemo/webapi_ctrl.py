@@ -53,7 +53,6 @@ def ctrl_main(configfile,inmethod=None,inparams=None):
   req=Request() 
   req.dtables=dtables # from api_ddef
 
-  #req.inparams=cgi_parse_std_parameters(req)  
   if req.flask:
     req.inparams=flask_parse_std_parameters(req,inmethod,inparams) 
   else:
@@ -66,8 +65,6 @@ def ctrl_main(configfile,inmethod=None,inparams=None):
     req.conf=conf
   except:
     handle_error(req,1,'cannot read system configuration') 
-  set_logging(req.conf)    
-
   try:  
     set_logging(req.conf)               
   except:
@@ -191,17 +188,20 @@ def cgi_parse_std_parameters(req):
       setattr(req,param,res[param])
   req.stdparams=res
   return inparams
-  
+
+
 def authenticate(req):
-  #sid="test"
   if req.stdparams['token']: sid=req.stdparams['token']
   else: sid=None
   if not sid:
     return False
   elif sid=="test":
+    #return False
     req.userid=1
     req.username="testuser"  
     req.userlevel=0
+    req.usergroup=1
+    req.usergroups=[1]
     return True
   else:
     req.sid=sid        
@@ -212,6 +212,11 @@ def authenticate(req):
       req.userid=data[0]
       req.username=data[1]  
       req.userlevel=data[4]
+      req.usergroup=data[8]
+      req.usertopgroup=data[9]
+      get_set_req_groups(req)
+      logging.info("AUT "+str(req.ipaddress)+" "+str(sid)+" as "
+                  "id: "+str(req.userid)+" name: "+str(req.username)+" level: "+str(req.userlevel))
       if data[5]: req.userlang=data[5]
       if data[6]: req.useruistyle=data[6]
       req.userfullname=''     
@@ -229,59 +234,55 @@ def authenticate(req):
       elif req.username and req.username.startswith("facebook:"):           
         req.login_service="facebook"
       return True   
-      
+
+def get_set_req_groups(req):    
+  groups=db_get_usergroups(req,req.userid,req.usergroup,req.usertopgroup)
+  req.usernamedgroups=groups
+  req.usergroups=map(lambda x: x["id"], groups)
+
 
 def dispatch(req):  
-  if req.op=='rawlocations':
-    handle_raw_locations(req)
-  elif req.op=='addprofile':
-    handle_add_profile(req)
-  elif req.op=='startprofile':
-    handle_start_profile(req)
-  elif req.op=='getprofile':  
-    handle_get_profile(req)  
-  elif req.op=='profile_list': 
-    handle_profile_list(req)
-  elif req.op=='getcomparison':
-    handle_get_comparison(req)
-  elif req.op=='register_mail':
-    handle_register_mail(req)  
-  elif req.op=='confirm_register':
-    handle_confirm_register(req)  
-  elif req.op=='change_password':
-    handle_change_password(req) 
-  elif req.op=='count':                  
+  if req.op=='count':                  
     if dtables.has_key(req.table):
       handle_count(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")    
   elif req.op=='list':            
-    if req.table=='users':
-      handle_list_users(req)  
-    elif req.table=='sessions':
-      handle_list_sessions(req)      
-    elif dtables.has_key(req.table):
+    #if req.table=='users':
+    #  handle_list_users(req)  
+    #elif req.table=='sessions':
+    #  handle_list_sessions(req)      
+    if dtables.has_key(req.table):
       handle_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")   
+  elif req.op=='countedlist':       
+    #if req.table=='users':
+    #  handle_counted_list_users(req)  
+    #elif req.table=='sessions':
+    #  handle_counted_list_sessions(req)         
+    if dtables.has_key(req.table):
+      handle_counted_list(req,req.table)       
+    else:
+      handle_error(req,4,"unknown table parameter")      
   elif req.op=='update':
-    if req.table=='users':
-      handle_update_users(req)
-    elif dtables.has_key(req.table):
+    #if req.table=='users':
+    #  handle_update_users(req)
+    if dtables.has_key(req.table):
       handle_update(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")         
   elif req.op=='add':
-    if req.table=='users':
-      handle_add_users(req)    
-    elif dtables.has_key(req.table):
+    #if req.table=='users':
+    #  handle_add_users(req)    
+    if dtables.has_key(req.table):
       handle_add(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter") 
   elif req.op=='delete':
-    if req.table=='users':
-      handle_delete_users(req)  
-    elif dtables.has_key(req.table):
+    #if req.table=='users':
+    #  handle_delete_users(req)  
+    if dtables.has_key(req.table):
       handle_delete(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")       
@@ -340,10 +341,9 @@ def handle_password_login(req):
     handle_error(req,3,'username and password parameters missing') 
   else:
     import hashlib
-    passhash=hashlib.sha1(req.stdparams["password"]).hexdigest()
-    
-    odata={"id":123,"username":"jbrown",
-             "level":0,"fullname":"John Green"}
+    passhash=hashlib.sha1(req.stdparams["password"]).hexdigest()    
+    odata={"id":123,"username":"testuser",
+           "level":0,"fullname":"Test User"}
     tmp=out_format_list(req,odata)
     return tmp         
     
@@ -390,31 +390,6 @@ def handle_password_login(req):
       tmp=out_format_list(req,odata)
       return tmp
 
-def handle_profile_list(req):
-  """
-  """  
-  if not (req.inparams.has_key("user_id")):
-    handle_error(req,3,'user_id parameter missing') 
-  else:    
-    data=db_get_profile_list(req,req.inparams["user_id"].value)   
-    tmp=out_format_list(req,data)
-    return tmp
-
-def handle_get_comparison(req):
-  if not req.id:
-    handle_error(req, 3, 'id parameter missing')
-
-  country_code = req.id
-  count = 100
-
-  data = db_get_comparison_profile(req, country_code, count)
-  try:
-    outdata = json.loads(data.get("jsondata", "[]"))
-  except ValueError:
-    outdata = []
-
-  out_format_list(req, outdata)
-
 
 def handle_logout(req):  
   """  
@@ -424,7 +399,7 @@ def handle_logout(req):
     try:
       logout_sessions(req,req.sid,req.username)  
     except:
-      req.warning="Väljalogimisel tekkis tõrge: vajadusel proovi hiljem uuesti või tühjenda oma brauser cookie-dest!" 
+      req.warning="problem logging out" 
       req.op="home"
       dispatch(req)  
       return      
@@ -436,12 +411,12 @@ def handle_logout(req):
         uresp=urllib2.urlopen(ureq)
         jsonstr = uresp.read()          
       except:
-        req.warning="Google kaudu väljalogimiseks mine palun <a href='https://plus.google.com/apps'>sellele lehele</a>!" 
+        req.warning="Please go to <a href='https://plus.google.com/apps'>this page</a>!" 
         req.op="home"
         dispatch(req)  
         return        
     else:    
-      req.warning="Google kaudu väljalogimiseks mine palun <a href='https://plus.google.com/apps'>sellele lehele</a>!" 
+      req.warning="Please go to  <a href='https://plus.google.com/apps'>this page</a>!" 
       req.op="home"
       dispatch(req)  
       return
@@ -461,37 +436,6 @@ def handle_change_password(req):
   return tmp
 
 
-# ---------- locations --------------
-
-def handle_raw_locations(req):  
-  web_flag=True
-  required=["lat0","lng0","lat1","lng1"] #"instid","version","uuid","code"]
-  data=req.stdparams
-  for k in required:
-    if not data.has_key(k):
-      handle_error(req,10,"tech error: input does not contain "+k) 
-      return    
-  # make sql query
-  sql="""select id,rank,types,extra --- id,lat,lng,name,thumb,pop,types
-    from locations where 
-    lat>=%(lat0)s and lat<=%(lat1)s and
-    lng>=%(lng0)s and lng<=%(lng1)s and 
-    status='A' order by pop desc limit %(count)s"""
-  count=10
-  if data.has_key("count"):
-    count=data["count"]    
-  if count>1000: count=1000   
-  argv={"lat0":float(data["lat0"]), "lat1":float(data["lat1"]),
-        "lng0":float(data["lng0"]), "lng1":float(data["lng1"]),
-        "count": count}          
-  # query data from database
-  dres=db_get_rows_with_colnames(req,sql,argv,0,count)
-  #dres=[data["lat0"],data["lng1"]]
-  out_format_list(req,dres)
-  return    
-  #output_res(req,dres)
-
-
 # ----------- generic table functions -------------
 
 
@@ -503,13 +447,26 @@ def handle_list(req,table):
   out_format_list(req,data)
   return
 
-def handle_count(req,table):
+
+def handle_count(req,table,extraflds=None):
   """
   """          
   if not authorize_show(req,table,'list'): return  
-  data=get_count_data(req,table)
+  data=get_count_data(req,table,extraflds)
   out_format_list(req,data)
   return  
+
+def handle_counted_list(req,table,extraflds=None):
+  """
+  """          
+  if not authorize_show(req,table,'list'): return 
+  countdata=get_count_data(req,table,extraflds) 
+  if not countdata or (not countdata.has_key("count")) or countdata["count"]<1:
+    out_format_list(req,{"count":0,"list":[]})
+    return
+  data=get_list_data(req,table)
+  out_format_list(req,{"count": countdata["count"],"list":data})
+  return
 
 def handle_add(req,table):
   """
@@ -539,230 +496,8 @@ def handle_delete(req,table):
 
 # ----------- specific table functions -------------
   
-# - - - - - users - - - - 
 
-
-def handle_list_users(req):
-  """
-  """          
-  table="users"
-  if not authorize_show(req,'users','list'): return
-  #data=get_list_users_data(req)
-  data=get_list_data(req,table)  
-  if data and req.userlevel not in [0,1]:
-    d=[]
-    for el in data: 
-      if el['id']==req.userid: d.append(el)
-    data=d
-  out_format_list(req,data)
-  return   
-  
-def handle_viewrec_users(req):
-  """
-  """          
-  if not authorize_show(req,'users','viewrec'): return
-  if req.userlevel not in [0,1]:
-    if str(req.userid)!=str(req.rowid): return
-  data=get_viewrec_users_data(req)  
-  show_viewrec_users(req,data)
-  return  
-
-
-def handle_update_users(req):
-  """
-  """         
-  table="users"
-  if not authorize_show(req,'users','edit'): return
-  if req.userlevel not in [0,1]:
-    if not req.data or len(req.data)!=1 or not req.data[0].has_key("id"): 
-      handle_error(req,5,'no rights to change several users') 
-      return
-    if req.key!="id": 
-      handle_error(req,5,'no rights to change users identified not by id') 
-      return  
-    ok_keys=["id","firstname","lastname","fullname","phone","email",
-             "country","address","lang","uistyle"]        
-    for key in req.data[0].keys():
-      if not key in ok_keys:
-        handle_error(req,5,'no rights to change field '+key) 
-        return  
-    if str(req.userid)!=str(req.data[0]["id"]): 
-      handle_error(req,5,'no rights to change a profile of another user') 
-      return
-  res=update_data(req,table,req.key,req.data)  
-  out_format_list(req,res)
-  return 
-
-def handle_add_users(req):
-  """
-  """ 
-  if not authorize_show(req,'users','add'): return
-  show_add_users(req,None)
-  return   
-  
-  
-def handle_saveedit_users(req):
-  """
-  """          
-  if not authorize_show(req,'users','saveedit'): return
-  if req.userlevel not in [0,1]:
-    if str(req.userid)!=str(req.rowid): return
-  data=get_input_rec_data(req)
-  err=update_users_data(req,data)
-  if err:
-    req.warning="Cannot save entered data! "+str(err)
-    req.useinputasdata=1
-    handle_edit_users(req)
-    return    
-  req.op=req.nextop  
-  req.useinputasdata=0    
-  dispatch(req)  
-  return
-
-def handle_saveadd_users(req):
-  """
-  """      
-  if not authorize_show(req,'users','saveadd'): return
-  err=None  
-  data=get_input_rec_data(req)
-  res=add_users_data(req,data)
-  if type(res) is tuple:
-    req.rowid=res[0]
-  elif res!=None:
-    err=res     
-  if err:
-    req.warning="Cannot save entered data! "+str(err)
-    req.useinputasdata=1
-    handle_add_users(req)
-    return    
-  req.op=req.nextop  
-  req.useinputasdata=0    
-  dispatch(req)  
-  return
-
-def handle_delete_users(req):
-  """
-  """        
-  if not authorize_show(req,'users','delete'): return
-  deletekeys=req.inparams.getlist("ctf_rowselect")
-  req.deletekeys=deletekeys
-  err=delete_users(req)
-  if err:
-    req.warning="Cannot delete selected record(s)! "+str(err)    
-  req.op='list'
-  req.deletekeys=[]  
-  handle_list_users(req)
-  return   
-
- 
-
-# - - - - - sessions - - - - 
-
-
-def handle_list_sessions(req):
-  """
-  """            
-  if not authorize_show(req,'sessions','list'): return
-  #data=get_list_sessions_data(req)   
-  table="sessions"
-  data=get_list_data(req,table)
-  if data and req.userlevel not in [0,1]:
-    d=[]
-    for el in data: 
-      if el['username']==req.username: d.append(el)
-    data=d
-  out_format_list(req,data)
-  return 
-  
-  
-def handle_viewrec_sessions(req):
-  """
-  """          
-  if not authorize_show(req,'sessions','viewrec'): return
-  data=get_viewrec_sessions_data(req)  
-  show_viewrec_sessions(req,data)
-  return  
-  
-def handle_edit_sessions(req):
-  """
-  """         
-  if not authorize_show(req,'sessions','edit'): return
-  if not req.rowid:
-    req.warning='No rows selected for editing.'
-    req.op='list'
-    handle_list_sessions(req)
-    return    
-  data=get_viewrec_sessions_data(req)  
-  show_edit_sessions(req,data)
-  return 
-
-def handle_add_sessions(req):
-  """
-  """ 
-  if not authorize_show(req,'sessions','add'): return
-  show_add_sessions(req,None)
-  return   
-  
-  
-def handle_saveedit_sessions(req):
-  """
-  """          
-  if not authorize_show(req,'sessions','saveedit'): return
-  data=get_input_rec_data(req)
-  err=update_sessions_data(req,data)
-  if err:
-    req.warning="Cannot save entered data! "+str(err)
-    req.useinputasdata=1
-    handle_edit_sessions(req)
-    return    
-  req.op=req.nextop  
-  req.useinputasdata=0    
-  dispatch(req)  
-  return
-
-def handle_saveadd_sessions(req):
-  """
-  """      
-  if not authorize_show(req,'sessions','saveadd'): return
-  err=None  
-  data=get_input_rec_data(req)
-  res=add_sessions_data(req,data)
-  if type(res) is tuple:
-    req.rowid=res[0]
-  elif res!=None:
-    err=res     
-  if err:
-    req.warning="Cannot save entered data! "+str(err)
-    req.useinputasdata=1
-    handle_add_sessions(req)
-    return    
-  req.op=req.nextop  
-  req.useinputasdata=0    
-  dispatch(req)  
-  return
-
-def handle_delete_sessions(req):
-  """
-  """        
-  if not authorize_show(req,'sessions','delete'): return
-  deletekeys=req.inparams.getlist("ctf_rowselect")
-  req.deletekeys=deletekeys
-  err=delete_sessions(req)
-  if err:
-    req.warning="Cannot delete selected record(s)! "+str(err)    
-  req.op='list'
-  req.deletekeys=[]  
-  handle_list_sessions(req)
-  return   
-  
-  
-
-
-  
-# - - - - conf,   - - - - -   
-
-
-# -------- conf, logging and printing --------------------------
+# -------- conf and logging ------------------
 
 
 def get_conf(req,configfile):   
@@ -788,24 +523,7 @@ def get_conf(req,configfile):
     conf["db_user"]=cp.get('Database', 'user')
     conf["db_password"]=cp.get('Database', 'password')      
   except:
-    handle_error(req,1,'Problems reading Database section of the configuration file '+configfile)
-  """  
-  if not cp.has_section("Location"): cp.add_section("Location")  
-  try:  
-    conf["template_path"]=cp.get('Location', 'template_path')
-    conf["cgi_prefix"]=cp.get('Location', 'cgi_prefix')
-    conf["htdocs_prefix"]=cp.get('Location', 'htdocs_prefix') 
-    conf["photo_prefix"]=cp.get('Location', 'photo_prefix')        
-    conf["cgi_callable_path"]=cp.get('Location', 'cgi_callable_path')
-    conf["photo_path"]=cp.get('Location', 'photo_path')   
-    conf["zip_path"]=cp.get('Location', 'zip_path')   
-    conf["ogr2ogr_path"]=cp.get('Location', 'ogr2ogr_path')
-    conf["convert_path"]=cp.get('Location', 'convert_path')
-    conf["convert_param"]=cp.get('Location', 'convert_param')
-    conf["convert_res"]=cp.get('Location', 'convert_res')
-  except:
-    handle_error(req,1,'Problems reading location section of the configuration file '+configfile)    
-  """  
+    handle_error(req,1,'Problems reading Database section of the configuration file '+configfile) 
   if not cp.has_section("View"): cp.add_section("View")   
   try:
     conf["shown_rows"]=int(cp.get('View', 'shown_rows'))
@@ -823,10 +541,6 @@ def get_conf(req,configfile):
         
 
 def set_logging(conf):
-  #format='%(asctime)s # %(levelname)s # %(message)s'
-  #logging.basicConfig(filename="/tmp/xlog",level=logging.DEBUG,format=format)
-  #return 
-  #
   if not conf['admlogfile'] or not conf['loglevel']:
     logger = logging.getLogger()
     logger.disabled=True

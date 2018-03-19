@@ -1,23 +1,7 @@
 
 // configuration and global vars are all in globalState
-// requires a few configuration vars in the html page
-
-/* conf in html
-
-var send_url="/cgi-bin/send"
-var ask_url="/cgi-bin/ask"
-
-var DEFAULT_MAP_CENTER_LAT=58.87;
-var DEFAULT_MAP_CENTER_LNG=25.41;
-var DEFAULT_INITIAL_ZOOM=8;
-
-*/
 
 var username=null;
-
-var MAP_CENTER_LAT=DEFAULT_MAP_CENTER_LAT;
-var MAP_CENTER_LNG=DEFAULT_MAP_CENTER_LNG;
-var INITIAL_ZOOM=DEFAULT_INITIAL_ZOOM;
 
 var addflag=true;
 var marker=false;
@@ -33,11 +17,6 @@ var sendrequest;
 var successflag=false;
 var cancelflag=false;
 var messagefilter=false;
-
-var tags={
-  "test 1": "test 1",
-  "test 2": "test 2",
-}  
 
 var globalState = {
   

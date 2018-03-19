@@ -7,7 +7,7 @@
 
 (function(exports) {
   "use strict";
-  
+
 // ====== module start =========
   
 // convenient shorthands
@@ -88,9 +88,9 @@ var AutoResource = React.createClass({
   
   updateState: function(statechange)  { // {op:.., action: ... rowid:..., group:...,)    
     var tmpstate,filter,refkey,stateprams,useViewdef,tmpdata,isParentView=false,tst=false,wait=false,viewdef;
-    autoutils.debug("Autoresource updateState called with statechange:");
-    autoutils.debug(statechange);
-    autoutils.debug(this.state);
+    //autoutils.debug("Autoresource updateState called with statechange:");
+    //autoutils.debug(statechange);
+    //autoutils.debug(this.state);
     
      // ------ showing messages  ----
     
@@ -99,26 +99,102 @@ var AutoResource = React.createClass({
       console.log(statechange);
       //this.setState({viewallfields:true});
       if (statechange.action=="loaddata") {
-        autoapi.getMessages(this);
+        autoapi.getMessages(this,{});
+      } else if (statechange.action=="showsentandload") {
+        autoapi.getMessages(this,statechange);  
       } else if (statechange.action=="sendmessages") {
         autoapi.sendMessages(this,statechange);        
       } 
-      this.setState({"op":"messages", "action":null});
+      //this.setState({"op":"messages", "action":null});
       return;
-    } 
+    }     
     
     // ------ showing overview  ----
     
-    if (this.state.op=="overview") {
+    if (statechange.op=="overview") {
       console.log("overview in autoresource");
+      //console.log(statechange);
+      //this.setState({viewallfields:true});
+      if (statechange.action=="loaddata") {
+        autoapi.getOverview(this);      
+      } 
+      return;
+    } 
+    
+    // ------ showing devices  ----
+    
+    if (statechange.op=="devices") {
+      console.log("devices in autoresource");
       console.log(statechange);
       //this.setState({viewallfields:true});
       if (statechange.action=="loaddata") {
-        autoapi.getOverview(this);
+        autoapi.getDevices(this);
       }  
       return;
     } 
-       
+    
+    // ------ showing one device  ----
+    
+    if (statechange.op=="onedevice") {
+      //console.log("onedevice in autoresource for "+statechange.id);
+      //console.log(statechange);
+      //this.setState({viewallfields:true});
+      if (statechange.action=="loaddata") {
+        autoapi.getOneDevice(this,statechange.viewdef,statechange.id);
+      } else if (statechange.action=="showsent") {
+        statechange.action=null;
+        this.setState(statechange);
+      }  
+      return;
+    } 
+
+    // ------ showing and saving conf  ----
+
+    if (statechange.op=="deviceconf") {
+      //console.log("deviceconf in autoresource");
+      //console.log(statechange);
+      //this.setState({viewallfields:true});
+      if (statechange.action=="loaddata") {
+        //autoapi.getDeviceConf(this,{});
+        autoapi.getOneDevice(this,statechange.viewdef,statechange.id);
+      } else if (statechange.action=="startautorefresh") {
+        //autoapi.getDeviceConf(this,{});
+        autoapi.getOneDevice(this,statechange.viewdef,statechange.id); 
+      }else if (statechange.action=="showsentandload") {
+        //autoapi.getDeviceConf(this,statechange);  
+        autoapi.getOneDevice(this,statechange.viewdef,statechange.id);
+      } else if (statechange.action=="savedeviceconf") {
+        tmpdata=autoutils.makeSaveParams(null,statechange.viewdef,null);
+        //console.log("tmpdata:")
+        //console.log(tmpdata);
+        var devconf=statechange.oldconf;
+        if (!tmpdata || !devconf || !_.has(devconf,"model")) {
+          this.updateState({op:"onedevice", action: "showsent", 
+                  alert: "danger", alertmessage:"error: some internal conf data is missing",
+                  viewdef: autoutils.getViewdef("onedevice"),
+                  id:statechange.deviceid});
+          return;         
+        }
+        devconf["model"]=tmpdata.data;
+        //console.log("devconf:")
+        //console.log(devconf);
+        autoapi.sendDeviceConf(this,{deviceid:statechange.deviceid, conf:tmpdata.data});        
+      } 
+      //this.setState({"op":"messages", "action":null});
+      return;
+    } 
+
+    // ------ showing alerts  ----
+    
+    if (statechange.op=="alerts") {
+      console.log("alerts in autoresource");
+      console.log(statechange);
+      //this.setState({viewallfields:true});
+      if (statechange.action=="loaddata") {
+        autoapi.getAlerts(this);
+      }  
+      return;
+    }     
     
     // ------ showing all or only filled fields ----
     
@@ -133,7 +209,7 @@ var AutoResource = React.createClass({
     // --- redraw with a changed field value and no alert ----
     
     if (statechange["action"]=="redraw") {
-      autoutils.debug("redraw");
+      //autoutils.debug("redraw");
       if (statechange.setFieldKey) {
         var tmp=this.state.data;
         if (!tmp) tmp={};
@@ -157,16 +233,30 @@ var AutoResource = React.createClass({
     // --- simple menu select action ----
     
     if (statechange["action"]=="simplemenuselect") {
-      //autoutils.debug("simplemenuselect");
-      //autoutils.debug(statechange.simplemenuselectname);     
+      var mname=statechange.simplemenuselectname;
+      autoutils.debug("simplemenuselect: !"+mname+"!");
       viewdef=autoutils.getViewdef(statechange.simplemenuselectname);     
       stateparams={"op":"list","action":"sort","viewdef":viewdef, "preaction":"reset",
-                   "simplemenuselectname":statechange.simplemenuselectname,
-                   "menuselectname":statechange.simplemenuselectname,
-                   "offset":0, "limit":autoreact.getLocalListLimit(viewdef),
-                   "sortkey":"id","down":true, "parent":null};  
-      autoapi.getListSingle(this,"get",viewdef,stateparams);
-      return;   
+                    "simplemenuselectname":statechange.simplemenuselectname,
+                    "menuselectname":statechange.simplemenuselectname,
+                    "offset":0, "limit":autoreact.getLocalListLimit(viewdef),
+                    "sortkey":"id","down":true, "parent":null}; 
+      //autoutils.debug(statechange.simplemenuselectname); 
+      if (_.indexOf(["wearables","web","longpoll","cron","disk","processes"],mname)>=0) {        
+        var logfilename;
+        if (mname=="wearables") logfilename="devicelogfile";
+        else if (mname=="web") logfilename="admlogfile";
+        else if (mname=="longpoll") logfilename="polllogfile";
+        else if (mname=="cron") logfilename="monitorlogfile";
+        else if (mname=="disk") logfilename="diskstats";
+        else if (mname=="processes") logfilename="procstats";
+        autoutils.debug("simplemenuselect2: "+mname);
+        autoapi.getLog(this,"getlog",logfilename,stateparams);
+        return;     
+      } else {         
+        autoapi.getListSingle(this,"get",viewdef,stateparams);
+        return; 
+      }  
     }
     
     // --- complex menu select action ---
@@ -245,10 +335,18 @@ var AutoResource = React.createClass({
     autoutils.debug("about to handle list op");
     autoutils.debug(statechange.op);
     autoutils.debug(statechange.action);
-    console.log(this.state.viewdef);
-    console.log(stateparams);
-    
-    if (statechange.op==="list" && (statechange.action==="search" || statechange.action==="fresh")) {      
+    //console.log(this.state.viewdef);
+    //console.log(stateparams);
+    if (statechange.op==="list" && statechange.action==="initialsearch") {      
+      statechange.offset=0;
+      //wait=true;
+      stateparams={"offset":statechange.offset, //limit: 20,
+                   "limit":autoreact.getLocalListLimit(this.props.viewdef),
+                   "sortkey":statechange.sortkey,"down":statechange.down, "parent":null,
+                   "preaction":"reset",
+                   "action":"search"};                     
+      autoapi.getList(this,"get",statechange.viewdef,stateparams);    
+    } else if (statechange.op==="list" && (statechange.action==="search" || statechange.action==="fresh")) {      
       statechange.offset=0;
       //wait=true;
       stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
@@ -258,11 +356,8 @@ var AutoResource = React.createClass({
       statechange.offset=0; 
       //wait=true;
       stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
-                   "sortkey":statechange.sortkey,"down":statechange.down, "parent":this.state.parent};
-                   
-      autoutils.debug("about to call getlist");                  
-      console.log(stateparams);                   
-      console.log(this.state.viewdef); 
+                   "sortkey":statechange.sortkey,"down":statechange.down, "parent":this.state.parent};                   
+      //autoutils.debug("about to call getlist");                  
       autoapi.getList(this,"get",this.state.viewdef,stateparams); 
       this.state.op="wait";                   
     } else if (statechange.op==="list" && statechange.action==="next") {      
@@ -363,7 +458,8 @@ var AutoResource = React.createClass({
     autoutils.debug("this.state.op");
     autoutils.debug(this.state.op);
     */
-    if (statechange.action!="save" && statechange.action!="delete" && statechange.action!="apiwait") {
+    if (statechange.action!="save" && statechange.action!="delete" && 
+        statechange.action!="apiwait") {
       if (statechange.op=="view" && !statechange.parent) { //(statechange.action!="wait" && this.state.op!="list" && !this.statechange.parent) {
         autoutils.storeHistory(this.state,stateparams);
       }  
@@ -402,7 +498,8 @@ var AutoResource = React.createClass({
   
   // --- whether to update and what to do finally after update ----
   
-  shouldComponentUpdate: function(nextProps, nextState) {
+  shouldComponentUpdate: function(nextProps, nextState) {  
+    if (nextState.action=="initialsearch") return false;    
     return true;
     /*
     if (nextState.action=="save") {
@@ -428,7 +525,14 @@ var AutoResource = React.createClass({
   // ---- actual render -----
   
   render: function() {    
-    autoutils.debug("AutoResource render");     
+    //autoutils.debug("AutoResource render");        
+    //autoutils.debug(this.state.op);  
+    //autoutils.debug(this.state.action); 
+    //autoutils.debug(this.state.preaction); 
+    //autoutils.debug(this.state.data); 
+    //autoutils.debug(this.state.filterdata);    
+    //autoutils.debug(this.state.viewdef);
+    
     //autoutils.debug("this.state.prefill:");   
     //autoutils.debug(this.state.prefill);  
     //autoutils.debug("this.state.data:");   
@@ -439,17 +543,29 @@ var AutoResource = React.createClass({
     //autoutils.debug(this.state.alertmessage);
     //if (this.state.op==="block") return null;
     var leftmenu=false, simplemenu=true, label="", limit, max, datarow; 
+    var filterdata=this.state.filterdata;
     globalState.op=this.state.op  
     globalState.rowid=this.state.rowid;
-    if (!this.state.viewdef) {
-      if (this.state.alert) {
-        return ce("div", {className:"alert alert-"+this.state.alert+" loaddata"}, this.state.alertmessage);
-      } else {
-        return ce("div", {className:"alert alert-danger loaddata"}, trans("no data and no view definition"));
-      }  
-    }  
+    
+    if (this.state.action=="initialsearch") {
+      return ce("div",{});
+    }    
+    
     if (this.state.op=="messages") {
-      return ce(automessages.AutoMessages,{data:this.state.data,callback:this.updateState});
+      if (this.state.action=="loaddata") {
+         return ce("div",{});
+      } else {
+        return ce(automessages.AutoMessages,
+          {data:this.state.data,alert:this.state.alert,alertmessage:this.state.alertmessage,
+           callback:this.updateState});
+      } 
+      //if (!this.state.data) return ce("div","ha");
+      // else return ce(autooverview.AutoOverview,{data:this.state.data});
+    }
+    if (this.state.op=="onedevice") {
+      return ce(onedevice.ShowDevice,{data:this.state.data, id:this.state.rowid,
+                                      alert:this.state.alert,alertmessage:this.state.alertmessage,
+                                      viewdef:this.state.viewdef,callback:this.updateState});
       //if (!this.state.data) return ce("div","ha");
       // else return ce(autooverview.AutoOverview,{data:this.state.data});
     }
@@ -458,17 +574,42 @@ var AutoResource = React.createClass({
       //if (!this.state.data) return ce("div","ha");
       // else return ce(autooverview.AutoOverview,{data:this.state.data});
     }
+    if (this.state.op=="manage") {
+      return ce(automanage.AutoManage,{data:this.state.data});
+      //if (!this.state.data) return ce("div","ha");
+      // else return ce(autooverview.AutoOverview,{data:this.state.data});
+    }
+    if (this.state.op=="alerts") {
+      return ce(autoalerts.AutoAlerts,{data:this.state.data});
+      //if (!this.state.data) return ce("div","ha");
+      // else return ce(autooverview.AutoOverview,{data:this.state.data});
+    }
+    if (this.state.op=="devices") {
+      return ce(autodevices.AutoDevices,{data:this.state.data});
+      //if (!this.state.data) return ce("div","ha");
+      // else return ce(autooverview.AutoOverview,{data:this.state.data});
+    }
+    if (!this.state.viewdef) {
+      if (this.state.alert) {
+        return ce("div", {className:"alert alert-"+this.state.alert+" loaddata"}, this.state.alertmessage);
+      } else {
+        return ce("div", {className:"alert alert-danger loaddata"}, trans("no data and no view definition"));
+      }  
+    }  
     if (this.state.viewdef["menu"] && this.state.op!=="list") leftmenu=true;
     if (this.state.viewmenu) leftmenu=true; 
+    
+    if (this.state.viewdef["simplemenu"]===false) {
+      simplemenu=false;  
+    /*
     if (false) { //(this.state.op==="wait" || this.state.action==="wait") {
-      return ce("span",{},"");
-      /*  
+      return ce("span",{},"");      
       return (
         ce("div", {className: "row listTitleRow"}, //{className: "row listTitleRow"},
           ce("h1",{className: "listresourcetitle"}, getObjectLabel(null,this.state.viewdef)) 
         )   
       );
-      */        
+    */        
     } else if (this.state.parent) {
       label=getObjectLabel(this.state.parent.data,null);     
     } else if (this.state.op==="view" || this.state.op==="edit") {
@@ -480,7 +621,7 @@ var AutoResource = React.createClass({
       label=getObjectLabel(null,this.state.viewdef);
     } else if (this.state.data && !_.isArray(this.state.data)) {  
       label=this.state.data["name"];         
-    } else {  
+    } else { 
       label=fldtrans(autoreact.fieldLabel(this.state.viewdef)); //+": "+trans(this.state.op);    
     }      
     return(     
@@ -558,7 +699,7 @@ var AutoResource = React.createClass({
                     callback:this.updateState, alert:this.state.alert, alertmessage:this.state.alertmessage,
                     viewallfields:this.state.viewallfields,
                     groupname: this.state.groupname,
-                    filterdata:this.state.filterdata,
+                    filterdata:filterdata,
                     parent:this.state.parent})
                 )
               )
@@ -646,6 +787,22 @@ var AutoMain = React.createClass({
                         op:this.props.op, callback:this.props.callback, parent:this.props.parent})
         )  
       );
+    } else if (this.props.op=="plain") {
+      //var datarow = autoreact.findRowByKey(this.props.data,this.props.viewdef,this.props.rowid);      
+      var datarow;
+      //if (this.props.op=="edit") datarow = this.props.data;
+      //else datarow = null;
+      datarow = this.props.data;
+      return (
+        ce("div", {className: "autoMain"},
+          ce(autoreact.AutoText, {datarow: datarow, auxdata: this.props.auxdata, 
+                        viewdef: this.props.viewdef, rowid: this.props.rowid,                         
+                        groupname: this.props.groupname, viewtitle:viewtitle,
+                        viewallfields:this.props.viewallfields,  
+                        alert:this.props.alert,alertmessage: this.props.alertmessage, 
+                        op:this.props.op, callback:this.props.callback, parent:this.props.parent})
+        )  
+      );       
     } else {
       autoutils.debug("unknown props.op in AutoMain");
       return ( ce("div", {className: "autoMain"}, "unknown props.op in AutoMain") );
@@ -662,7 +819,7 @@ var AutoSimpleMenu = React.createClass({
   }, 
   render: function() { 
     var viewdef=this.props.viewdef;
-    var menuitems=['users','locations','checkins','sessions'];
+    var menuitems=['users','locations','checkins','sessions'];  
     if (!menuitems) return "";     
     var menuitem,menulabel,menuclass;
     var menuBlocks = [];
@@ -673,20 +830,29 @@ var AutoSimpleMenu = React.createClass({
       if (this.props.simplemenuselectname) {
         if (this.props.simplemenuselectname==menuitem) menuclass+=" autoleftmenubuttonSelected";
       } else if (i==0) menuclass+=" autoleftmenubuttonSelected";                 
-      menuBlocks.push(
-        ce("li", {key:i+menulabel, 
-                      className: menuclass,
-                      onClick:this.handleButton.bind
-                        (this,menuitem)}, 
-          ce("a", {href: "#", className: "autoleftmenubuttonlink"},
-              menulabel)
-        )
-      );    
+      if (menuitem=='Server' || menuitem=='Logs' || menuitem=='Data') {
+        menuclass="autoleftmenuseparator";
+        menuBlocks.push(
+          ce("li", {key:i+menulabel, className: menuclass}, menulabel)
+        );    
+      } else {
+        menuBlocks.push(
+          ce("li", {key:i+menulabel, 
+                        className: menuclass,
+                        onClick:this.handleButton.bind
+                          (this,menuitem)}, 
+            ce("a", {href: "#", className: "autoleftmenubuttonlink"},
+                menulabel)
+          )
+        );    
+      }
     }
     return (
-      ce("ul",{className:"autoleftmenu"},
-        menuBlocks
-      )      
+      ce("div",{},
+        ce("ul",{className:"autoleftmenu"},
+          menuBlocks
+        )      
+      )  
     );     
   }
 });  

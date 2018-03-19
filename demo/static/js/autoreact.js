@@ -99,10 +99,13 @@ var AutoListForm = React.createClass({
   },  
   render: function() {
     var viewdef=this.props.viewdef;
-    var datarow=this.props.datarow;        
+    var datarow=this.props.datarow;   
     var fields=autoutils.orderFields(viewdef.fields);
-    var i, field, val, params, raw, stdfields=[], extfields=[], fieldlabel;
+    var i, field, val, params, raw, stdfields=[], extfields=[];
+    var fieldlabel, autoid, key, filterstyle, viewname;
     var dataFields = [];
+    if (viewdef.name) viewname=viewdef.name;
+    else viewname="dummy";
     for (i=0; i<fields.length; i++) {
       field=fields[i];
       if (!filterFieldShow(field) && !field["extfilter"]) continue;
@@ -110,38 +113,53 @@ var AutoListForm = React.createClass({
       else stdfields.push(field);
     }
     if (this.state.extfilter) fields=stdfields.concat(extfields); 
-    else fields=stdfields;   
+    else fields=stdfields;    
     for (i=0, field=""; i<fields.length; i++) {
       field=fields[i];      
       if (_.has(datarow,field.name)) val=datarow[field.name];   
       else val="";
+      key="search_"+field.name+"_"+i;
+      //autoid="autoid-search-"+viewdef.name+"-"+field.name+"-"+i;
+      autoid="autoid-search-"+viewname+"-"+field.name+"-"+i;
       fieldlabel=fieldLabel(field);
       params={name:field.name, rowid:this.props.rowid, value:val, 
-              viewdef:this.props.viewdef};
-      if (field["filterRange"] || field["type"]=="date") {
+              viewdef:this.props.viewdef, key:key};
+      if (field["filterRange"] || field["type"]=="date" || field["type"]=="datetime") {
         raw=ce("div",{className:"fldrange"}, 
-              ce(AutoFilterFld, _.extend(params, {filtertype: 'minvalue'})),             
+              ce(AutoFilterFld, _.extend(params, {filtertype: 'minvalue', autoid: autoid})),             
               ce("span", {className: "fldrangeseparator"}, " - "),
-              ce(AutoFilterFld, _.extend(params, {filtertype: 'maxvalue'}))
+              ce(AutoFilterFld, _.extend(params, {filtertype: 'maxvalue', autoid: autoid+"-max", key: key+"_max"}))
             );
         if (_.has(field,"help")) {
           raw=ce(AutoEditFldHelp, {viewdef:viewdef, field:field, name:field.name, raw:raw, fieldlabel:fieldlabel});
         }       
       } else {
-        raw=ce(AutoFilterFld, _.extend(params, {filtertype: 'value'}));
+        raw=ce(AutoFilterFld, _.extend(params, {filtertype: 'value', autoid: autoid}));
       }         
+      var c1="row fldrow", c2="col-md-4 fldlabel", c3="fldlabel", c4="col-md-8 fldinputcol";
+      if (viewdef.filterstyle==="horizontal") {
+        c1="inlineblock";c2="inlineblock fldlabelHorizontal";
+        c3="fldlabelHorizontal";c4="inlineblock fldinputcolHorizontal";
+      }  
       dataFields.push(
-        ce("div",{key:"list_tr"+i, className:"row fldrow"},
-          ce("div", {className: "col-md-4 fldlabel"}, fieldlabel), 
-          ce("div", {className: "col-md-8 fldinputcol"}, raw)  
+        ce("div",{key:viewname+"-filter-list_tr"+i, className:c1},
+          // ce("div", {className: "col-md-4 fldlabel"}, fieldlabel),
+          ce("div", {className: c2},
+            ce("label",{className: c3, htmlFor: autoid},fieldlabel) ),
+          ce("div", {className: c4}, raw)
         )  
-      );    
+      );            
     }        
     return (
       ce("form", {className:"autoForm", onSubmit:this.handleDataSubmit},
-        ce("div",{className:"container-fluid"},          
-          dataFields          
-        ),      
+        ((viewdef.filterstyle==="horizontal") ?       
+          ce("span",{className:""},          
+           dataFields          
+          ) :
+          ce("div",{className:"container-fluid"},          
+           dataFields          
+          )
+        ),  
         //ce("p",{}),  
         ce(AutoListButtons, {viewdef:this.props.viewdef, callback:this.props.callback,
                              extfilter: this.state.extfilter,
@@ -167,24 +185,27 @@ var AutoFilterFld = React.createClass({
   },
   componentWillMount: function() {
     var fld=_.findWhere(this.props.viewdef.fields, {name:this.props.name});
-    if (fld && fld["type"]==="date") this.setState({id: makeUniqueKey("autocmp-")});
+    if (fld && (fld["type"]==="date" || fld["type"]==="datetime")) // this.setState({id: makeUniqueKey("autocmp-")});
+      this.setState({id: this.props.autoid});
   },
   componentDidMount: function() {
     var fld=_.findWhere(this.props.viewdef.fields, {name:this.props.name});
-    if (fld && fld["type"]==="date") autoutils.setupDatePicker(this);
+    if (fld && (fld["type"]==="date" || fld["type"]==="datetime")) autoutils.setupDatePicker(this);
   },
   render: function() {        
-    var name=this.props.name;    
+    var name=this.props.name;
+    var autoid=this.props.autoid;    
     var fld=_.findWhere(this.props.viewdef.fields, {name:this.props.name});
     var fldtype;
     var raw;
+    var filterstyle=this.props.viewdef.filterstyle;
     if (_.has(fld,"type")) fldtype=fld.type;
     else fldtype="string";
     if (fldtype=="boolean") {             
       raw=ce(AutoEditFldBoolean, {defaultValue:"", rowid:null, name:name, 
-                                  filtertype: this.props.filtertype, datatype: "boolean",
+                                  filtertype: this.props.filtertype, datatype: "boolean", autoid:autoid,
                                   callback:this.handleChange});
-    } else if (fldtype=="date") {   
+    } else if (fldtype=="date" || fldtype=="datetime") {   
       var html="<input type='text' class='fldinput calfldinput' size='10' data-date-format='dd.mm.yyyy' ";
       html+=" data-type='date' data-filter='"+this.props.filtertype+"' ";
       html+=" id='"+this.state.id+"' name='"+name+"'></input>"     
@@ -195,15 +216,15 @@ var AutoFilterFld = React.createClass({
         fld["values"]=[""].concat(fld["values"]);
       }  
       raw=ce(AutoEditFldOption, {defaultValue:null, rowid:null, name:name, field:fld, 
-                                filtertype: this.props.filtertype, datatype: fldtype,
+                                filtertype: this.props.filtertype, datatype: fldtype, autoid:autoid,
                                 callback:this.handleChange}); 
     } else if (_.has(fld,"values") && fld["values"] && _.isArray(fld["values"])) {
       raw=ce(AutoEditFldOption, {defaultValue:null, rowid:null, name:name, field:fld,
                                 filtertype: this.props.filtertype,
-                                datatype: fldtype, callback:this.handleChange});  
+                                datatype: fldtype, autoid:autoid, callback:this.handleChange});    
     } else if (fldtype=="integer") {      
       raw=ce("input", {type:"text", className: "fldinput_int", "data-filter": this.props.filtertype, autoComplete:"off",
-                      name:name, value:this.state.value, "data-type": fldtype,
+                      name:name, value:this.state.value, "data-type": fldtype, id:autoid, //key:"search_"+name+"_"+this.state.id,
                       onChange:this.handleChange});      
     } else if (isSearchType(fldtype)) {
       raw=ce(AutoEditFldSearch,{
@@ -212,12 +233,15 @@ var AutoFilterFld = React.createClass({
              viewdef:this.props.viewdef,
              name:this.props.name, 
              "data-filter": "value",
-             show: "searchfield",       
+             show: "searchfield",
+             autoid: autoid,        
              searchValue:""}
       );                           
     } else {
-      raw=ce("input", {type:"text", className: "fldinput", "data-filter": this.props.filtertype, autoComplete:"off",
-                      name:name, value:this.state.value, "data-type": fldtype,
+      raw=ce("input", {type:"text", 
+                       className: ((filterstyle==="horizontal") ? "fldinputHorizontal" : "fldinput"), 
+                      "data-filter": this.props.filtertype, autoComplete:"off",
+                      name:name, value:this.state.value, "data-type": fldtype, id:autoid,
                       onChange:this.handleChange});      
                      
     }
@@ -262,8 +286,18 @@ var AutoListButtons = React.createClass({
     $('#'+helpModalContentId).html(txt);
     $('#'+helpModalId).modal('show');
   }, 
+  handleImport: function(e) {   
+    e.preventDefault();
+    autoutils.showImportModal();
+  }, 
   render: function() {
     var i,extfilter=false,help=false,inapproval=false;
+    var canimport=false;
+    if (this.props.viewdef && this.props.viewdef.object &&
+        _.indexOf(["infosystem","area", "classifier", "xmlasset"], // "service", 
+                  this.props.viewdef.object)>=0) {
+      canimport=true;
+    }
     if (this.props.viewdef.help) help=langelem(this.props.viewdef.help);    
     extfilter=_.some(this.props.viewdef["fields"],function(v) {return (v["extfilter"]===true) });  
     if (this.props.parent && this.props.parent.data && _.has(this.props.parent.data,"inapproval") &&
@@ -292,10 +326,14 @@ var AutoListButtons = React.createClass({
         )
       );                    
     } else {
+      var c1="row", c2="col-md-4", c3="col-md-8 autoListButtons";
+      if (this.props.viewdef.filterstyle==="horizontal") {
+        c1="inlineblock",c2="inlineblock",c3="inlineblock";
+      }  
       return (
-        ce("div",{className: "row"},
-          ce("div",{className: "col-md-4"}),
-          ce("div",{className: "col-md-8 autoListButtons"},
+        ce("div",{className: c1},
+          ce("div",{className: c2}),
+          ce("div",{className: c3},
             ((this.props.searchbutton) ?
               ce("input", {type:"submit", onClick:this.handleSearch, className:  primaryBtnClass, value:trans("Search")})
               : ""),
@@ -310,7 +348,12 @@ var AutoListButtons = React.createClass({
             ((autoutils.userAllowedAdd(this.props.viewdef) && !autoutils.hasNegativeProperty(this.props.viewdef,"edit") &&
               !inapproval) ?
               ce("input", {type:"submit", onClick:this.handleAdd, className:  secondaryBtnClass, value:trans("Add")})
-              : "")
+              : ""),
+            ((canimport &&
+              autoutils.userAllowedAdd(this.props.viewdef) && !autoutils.hasNegativeProperty(this.props.viewdef,"edit") &&
+              !inapproval) ?
+              ce("input", {type:"submit", onClick:this.handleImport, className:  secondaryBtnClass, value:trans("Import data")})
+              : "")  
             /*  
             ((autoutils.userAllowedAdd(this.props.viewdef) && !autoutils.hasNegativeProperty(this.props.viewdef,"edit") &&
               !inapproval) ?
@@ -384,7 +427,7 @@ var AutoScrollButtons = React.createClass({
                          className: secondaryBtnClass, "aria-label":"last"}, 
                          //trans("Last"))
               ce("span", {className:"glyphicon glyphicon-fast-forward lightGlyphicon", "aria-hidden":"true"}) ),
-            ((this.props.count && this.props.count<=1000 && this.props.count>20) ?
+            ((this.props.count && this.props.count<=globalState.showAllLimit && this.props.count>globalState.listLimit) ?
               ce("button", {type:"button", onClick:this.handleAll, 
                          className: secondaryBtnClass, "aria-label":"all"}, 
                          //trans("Last"))
@@ -423,11 +466,11 @@ var AutoList = React.createClass({
   render: function() {   
     //console.log("AutoList props.data: ");
     //console.log(this.props.data);
-    if (this.props.data==null) {      
-      return ce(automain.AutoAlertMessage,{alert:"info", alertmessage:trans("no data"), internal:false})
+    if (this.props.data==null) {
+      return ce(automain.AutoAlertMessage,{alert:"nodata", alertmessage:trans("no data"), internal:false})
     }
     if (_.isArray(this.props.data) && this.props.data.length==0) {
-      return ce("div",{className: "nodata"},trans("currently none"));
+      return null; // ce("div",{className: "nodata"},trans("currently none"));
     }
     if (!_.isArray(this.props.data)) {
       return null;
@@ -444,7 +487,8 @@ var AutoList = React.createClass({
         ce(AutoListHeaderCol, {key:"list_headercol"+field.name+i, 
                                name:field.name, 
                                fieldlabel:fieldLabel(field),
-                               nosort:autoutils.hasNegativeProperty(this.props.viewdef,"sort"),
+                               nosort: (autoutils.hasNegativeProperty(this.props.viewdef,"sort") ||
+                                        autoutils.hasNegativeProperty(field,"sort")),
                                sorted: (field["name"]==this.props.sortkey),
                                down: this.props.down,
                                isfirst: (dataHeaderCols.length<1),
@@ -526,17 +570,34 @@ var AutoListHeaderCol = React.createClass({
   }  
 });
 
+function okCoords(lat,lng) {
+  if (!lat || !lng) return false;
+  if (lat>90 || lat<(0-90)) return false;
+  return true;
+}
 
 var AutoRow = React.createClass({
   displayName: 'AutoRow',
   handleClick: function(x) {
-    console.log("row "+this.props.id);
     if (autoutils.hasNegativeProperty(this.props.viewdef,"onclick")) {
     } else if (this.props.viewdef.onclick) {
-      this.props.viewdef.onclick(this.props.id);
+      if (this.props.viewdef.name=='main_alerts') {
+        this.props.viewdef.onclick(this.props.datarow.device_id);
+      } else {  
+        this.props.viewdef.onclick(this.props.id);
+      }  
+    } else if (this.props.viewdef.onclickRow) {
+      this.props.viewdef.onclickRow(this.props.datarow);
+    } else if (this.props.viewdef.name=='overview_alerts') {
+      menuMap(this.props.datarow.device_id);  
     } else {
       this.props.callback({op:"view",rowid:this.props.id});
     }  
+  }, 
+  handleRowBtnClick: function(e) {
+    e.preventDefault();
+    //menuMap(this.props.id);
+    menuMap(this.props.datarow.device_id);
   }, 
   render: function() {
     var dataCols = [];
@@ -545,24 +606,47 @@ var AutoRow = React.createClass({
     var rowclass="datarow";
     var name;
     var val;
+    var isbutton;
     if (autoutils.hasNegativeProperty(this.props.viewdef,"onclick")) {
       rowclass="datarowNoclick"; 
     }
+    //rowclass+=" redtext"
+    console.log(this.props.viewdef.name);    
     for (var i=0, field=""; i<fields.length; i++) {
       field=fields[i];
+      isbutton=false;
       if (!autoutils.fieldShow(field,"list")) continue;
-      else if (!_.has(datarow,field.name)) val="";
-      else {
+      var btntest=true;
+      //console.log(field.name);
+      //console.log(datarow[field.name]);
+      if (this.props.viewdef.name=="main_media") {
+        if (field.name=="start_lat" || field.name=="start_lng") {
+          //console.log(datarow[field.name]);
+
+        } 
+        if (!okCoords(datarow.start_lat,datarow.start_lng)) btntest=false;
+      }
+      if (field["type"]=="button" && btntest) {
+        isbutton=true;
+        val=ce("button",{key:"listbtn"+i, className:"btn btn-default btn-xs rowbutton",
+                         onClick:this.handleRowBtnClick  },
+              field["label"]);
+      } else if (!_.has(datarow,field.name)) {
+        val="";
+      } else {
         val=autoutils.replaceWithAux(
               datarow[field.name],this.props.auxdata,field.type,"value");
         if (i==0) val=String(fieldValue(val,field,"list"));
         else val=fieldListValue(fieldValue(val,field,"list"),this.props.viewdef);       
       }  
+      
+      if (field.name=="msg_type" && (val=="man down" || val=="need assistance")) rowclass+=" redtext";
+      
       dataCols.push(ce("td", {key:"data_col"+i, 
                               className: ((dataCols.length<1) ?  
                                           "datacol" : 
                                           "datacol "+"widelistcol"), 
-                              onClick:this.handleClick}, 
+                              onClick:((isbutton) ? null : this.handleClick)}, 
                         val));
     }        
     return (
@@ -573,7 +657,29 @@ var AutoRow = React.createClass({
   }
 });
 
+// ---- view plain text -----
 
+var AutoText = React.createClass({
+  displayName: 'AutoText',
+  /*
+  handleButton: function(statechange) {
+    this.props.callback(statechange);
+  }, 
+  handleGroupButton: function(statechange) {
+    this.props.callback({rowid:this.props.rowid, groupname:statechange["groupname"]});
+  },
+  */ 
+  render: function() {
+    var datarow=this.props.datarow;    
+    return (
+      ce("div",{className: "autoviewgroups"},         
+        ce(automain.AutoAlertMessage,{alert:this.props.alert, alertmessage: this.props.alertmessage, internal:true}),
+        ce("div",{className: "smallSpacerDiv"},""),
+        ce("pre",{className: "autoPlainText"},String(datarow))              
+      )  
+    );  
+  }
+});
 
 // ---- view record -----
 
@@ -632,7 +738,7 @@ var AutoView = React.createClass({
           : ""),                   
         */
         ce(automain.AutoAlertMessage,{alert:this.props.alert, alertmessage: this.props.alertmessage, internal:true}),
-        ((datarow) ?
+        ((datarow && !(autoutils.hasNegativeProperty(this.props.viewdef,"buttons"))) ?
           ce(AutoViewButtons, {viewdef:this.props.viewdef, 
                                callback: this.handleButton, 
                                rowid:this.props.rowid,
@@ -640,7 +746,8 @@ var AutoView = React.createClass({
                                inapproval:inapproval,
                                viewallfields:this.props.viewallfields})
           :
-          ""),
+          ""
+        ),
         ((groups && viewdef["groupMenu"]!=="left") ? 
           ce(AutoGroupMenu, {viewdef:this.props.viewdef, groupname:this.props.groupname,op:this.props.op,
                             usedgroups:usedGroups,
@@ -681,17 +788,16 @@ var AutoViewButtons = React.createClass({
     autoutils.debug(val);
     this.props.callback({op:"view",action:"newversion","versionNr":val});
   },
+  /*
   handleSubmitApproval: function(e) {
     e.preventDefault();
     autoutils.modalConfirm(trans("Submit to approval?"),this.handleDoSubmitApproval);
   },
   handleDoSubmitApproval: function(val) {  
     if (val!="true") return;
-    return;
-    /*
     this.props.callback({op:"view",action:"submitapproval"});    
-    */
   },
+  */
   handleDelete: function(e) {   
     e.preventDefault();
     removeAlert();
@@ -701,9 +807,25 @@ var AutoViewButtons = React.createClass({
     if (val!="true") return;  
     this.props.callback({op:"edit",action:"delete", rowid:this.props.rowid, alert:false});    
   },
+  handleExport: function(val) { 
+    console.log("handleExport");   
+  },
+  handleAutorefresh: function(val) { 
+    console.log("handleAutorefresh");
+    this.props.callback({op:"view",rowid:this.props.rowid, action:"startautorefresh"});       
+  },
   render: function() {    
     var canedit = autoutils.userAllowedEdit(this.props.viewdef, this.props.datarow);
     var candelete = autoutils.userAllowedDelete(this.props.viewdef, this.props.datarow);
+    var expurl=autoapi.getApiUrl()+"/resource/"+this.props.rowid;
+    var canexport=false;
+    var canrefresh=false;
+    if (this.props.viewdef.autorefresh) canrefresh=true;
+    if (this.props.viewdef && this.props.viewdef.object &&
+        _.indexOf(["infosystem", "service", "area", "classifier", "xmlasset"],
+                  this.props.viewdef.object)>=0) {
+      canexport=true;
+    }  
     if (autoutils.hasNegativeProperty(this.props.viewdef,"edit")) {
       return ce("div",{},"");
     } else {
@@ -717,10 +839,15 @@ var AutoViewButtons = React.createClass({
             ce("button", {className: primaryBtnClass, onClick:this.handleEdit, type: "button"}, trans("Edit"))
             :
             ""),
-          ((this.props.viewallfields) ?
-            ce("button", {className: secondaryBtnClass, onClick:this.handleHideEmptyFields, type: "button"}, trans("Hide empty fields"))
+          ((autoutils.hasNegativeProperty(this.props.viewdef,"allFieldsButton")) ?
+            ""
             :
-            ce("button", {className: secondaryBtnClass, onClick:this.handleViewAllFields, type: "button"}, trans("View also empty fields")) ),
+            ((this.props.viewallfields) ?
+              ce("button", {className: secondaryBtnClass, onClick:this.handleHideEmptyFields, type: "button"},
+                          trans("Hide empty fields"))
+              :
+              ce("button", {className: secondaryBtnClass, onClick:this.handleViewAllFields, type: "button"},
+                          trans("View also empty fields")) )),
           ((autoutils.versionableViewdef(this.props.viewdef) && canedit) ?
             ce("button", {className: secondaryBtnClass, onClick:this.handleNewVersion, type: "button"}, trans("Create a new version"))
             :
@@ -733,7 +860,19 @@ var AutoViewButtons = React.createClass({
           ((candelete) ?
             ce("button", {className: secondaryBtnClass, onClick:this.handleDelete, type: "button"}, trans("Delete"))
             :
-            "")            
+            ""),
+          ((canexport) ?                        
+            ce("a",{href:expurl, target:"external", className: secondaryBtnClass, type: "button"}, 
+                  trans("Export data"))            
+            //ce("button", {className: secondaryBtnClass, onClick:this.handleExport, type: "button"}, trans("Export"))
+            :
+            ""),
+          ((canrefresh) ?                        
+            ce("button",{className: secondaryBtnClass, onClick:this.handleAutorefresh, type: "button"},
+                  trans("Update automatically"))            
+            //ce("button", {className: secondaryBtnClass, onClick:this.handleExport, type: "button"}, trans("Export"))
+            :
+            "")                 
         )
       );
     }
@@ -754,6 +893,8 @@ var AutoGroupMenu = React.createClass({
     if (!viewdef["groupMenu"]) return ce("span",{},"");
     var datarow=this.props.datarow;  
     var groups=getGroups(viewdef,this.props.op);
+    //console.log("groups");
+    //console.log(groups);
     if (!groups) return "";
     var group,grouplabel,groupclass;
     var groupBlocks = [];
@@ -763,7 +904,7 @@ var AutoGroupMenu = React.createClass({
          continue;
       grouplabel=fieldLabel(group);
       if (this.props.groupname==group["name"]) groupclass="active";
-      else groupclass="";      
+      else groupclass="";
       groupBlocks.push(
         /*
         ce("button", {key:i+group["name"], className: "btn btn-default btn-sm",                      
@@ -809,27 +950,31 @@ var AutoHandleGroup = React.createClass({
     var op=this.props.op;      
     var datarow=this.props.datarow;         
     var fields=autoutils.orderFields(viewdef.fields);
-    var field,val,grouplabel="",groupclass="",valueclass="",mustfill=false,fieldlabel="";    
+    var field,val,grouplabel="",groupclass="",valueclass="",mustfill=false,fieldlabel="",autoid;   
     if (group) {
       var groupmenu=viewdef["groupMenu"];
       if (!groupmenu || groupmenu=="left") grouplabel=fieldLabel(group);
       else grouplabel=null;
-      if (!groupmenu) groupclass="autoviewgroup";
-      else if ((groupmenu=="tabs" || groupmenu=="left") && groupname===group["name"]) groupclass="autoviewsinglegroup";
-      else groupclass="autohidegroup";
+      if (!groupmenu) 
+        groupclass="autoviewgroup";
+      else if ((groupmenu=="tabs" || groupmenu=="left") && groupname===group["name"]) 
+        groupclass="autoviewsinglegroup";
+      else 
+        groupclass="autohidegroup";
     }
-    var dataFields = [];    
+    var dataFields = []; 
     for (var i=0, field=""; i<fields.length; i++) {
       field=fields[i];
       if (group && group["name"] && group["name"]!==field["group"]) continue;
-      if (group && !group["name"] && field["group"]) continue;                
+      if (group && !group["name"] && field["group"]) continue; 
+      autoid="autoid-edit-"+field.name+"-"+i;      
       if (_.has(datarow,field.name)) val=datarow[field.name];   
       else val="";      
       if (val && val.length>100) valueclass="fldvalue fldvalue_large";
       else if (isComplexValue(val)) valueclass="fldvalue_complex";
       else valueclass="fldvalue";
       if (dataFields.length % 2 == 0) valueclass+=" evenvalue";
-      else valueclass+=" oddvalue";            
+      else valueclass+=" oddvalue";  
       if (op==="view") {
         // view form, no edit
         if (!autoutils.fieldShow(field,"view")) continue;
@@ -867,7 +1012,8 @@ var AutoHandleGroup = React.createClass({
                              name:field.name, rowid:this.props.rowid, value:val, 
                              viewdef:this.props.viewdef})
           );           
-        } else if (autoutils.hasNegativeProperty(field,"edit") || (field["name"] === "owner" && !autoutils.canChangeOwner(viewdef['object'], datarow))) {
+        } else if (autoutils.hasNegativeProperty(field,"edit") || 
+                   (field["name"] === "owner" && !autoutils.canChangeOwner(viewdef['object'], datarow))) {
           dataFields.push(
             ce("div",{key:makeKey("group_hfld"+field.name+"_"+i), className: "row fldrow"},
               ce(AutoHiddenFld,{name:field.name, rowid:this.props.rowid, value:val, 
@@ -882,13 +1028,23 @@ var AutoHandleGroup = React.createClass({
             fieldlabel=ce("span",{},fieldlabel,ce("span",{className: "mustFill"},"*"));
           } 
           dataFields.push(
-            ce("div",{key:makeKey("group_efld"+i), className: "row fldrow"},
+            ce("div",{key:makeKey("group_efld"+i), className: "row fldrow"},                                                                      
+              ce("div", {className: "col-md-4 fldlabel"}, 
+                ce("label",{className: "fldlabel", htmlFor: autoid},fieldlabel) ),                     
+              ce("div", {className: "col-md-8 fldinputcol"}, 
+                ce(AutoEditFld, {name:field.name, rowid:this.props.rowid, value:val,
+                                 auxdata:this.props.auxdata, fieldlabel:fieldlabel, 
+                                 autoid:autoid, parent:this.props.parent,
+                                 viewdef:this.props.viewdef, callback:this.handleChange, datarow: this.props.datarow})
+              )                        
+              /*
               ce("div", {className: "col-md-4 fldlabel"}, fieldlabel),
               ce("div", {className: "col-md-8 fldinputcol"}, 
                 ce(AutoEditFld, {name:field.name, rowid:this.props.rowid, value:val,
                                  auxdata:this.props.auxdata, fieldlabel:fieldlabel,                 
                                  viewdef:this.props.viewdef, callback:this.handleChange, datarow: this.props.datarow})
               )
+              */
             )              
           );                       
         }
@@ -948,6 +1104,7 @@ var AutoEdit = React.createClass({
                              datarow: datarow, auxdata:this.props.auxdata,
                              viewdef: viewdef, op:this.props.op,
                              group: null, groupname: null,
+                             parent:this.props.parent,
                              rowid: this.props.rowid, callback:this.props.callback})
         );
     else                            
@@ -957,6 +1114,7 @@ var AutoEdit = React.createClass({
                              datarow: datarow, auxdata:this.props.auxdata,
                              viewdef: viewdef, op:this.props.op,
                              group: groups[i], groupname: this.props.groupname,
+                             parent:this.props.parent,
                              rowid: this.props.rowid, callback:this.props.callback})
         );    
       }
@@ -1015,7 +1173,7 @@ var AutoEditFld = React.createClass({
     return {value:this.props.value}; //, searchValue: "", dynoptions:null};
   },  
   handleChange: function(e) {  
-    autoutils.debug("handleChange");    
+    //autoutils.debug("handleChange");    
     var thisfld,fld,val,i,found,flddata;
     var input=e.target; 
     removeAlert();
@@ -1089,7 +1247,10 @@ var AutoEditFld = React.createClass({
   componentWillMount: function() {
     if (this.props.viewdef) {
       var fld=_.findWhere(this.props.viewdef.fields, {name:this.props.name});    
-      if (fld && fld["type"]==="date") this.setState({id: makeUniqueKey("autocmp-")});    
+      if (fld && fld["type"]==="date") {
+        if (this.props.autoid) this.setState({id: this.props.autoid}); 
+        else this.setState({id: makeUniqueKey("autocmp-")});    
+      }  
     }  
   },
   componentDidMount: function() {
@@ -1101,6 +1262,7 @@ var AutoEditFld = React.createClass({
   render: function() { 
     var fld,pre;
     var name=this.props.name;
+    var autoid=this.props.autoid;
     if (this.props.viewdef) fld=_.findWhere(this.props.viewdef.fields, {name:this.props.name});
     var value=this.state.value;
     var fldtype,widget,cssclass,raw;
@@ -1129,6 +1291,7 @@ var AutoEditFld = React.createClass({
       params["auxdata"] = this.props.auxdata;
       params["viewdef"] = this.props.viewdef;
       params["datarow"] = this.props.datarow;
+      if (autoid) params.id = autoid;
       raw=ce(autocomp[fld.editWidget], params);
     } else if (_.has(fld,"edit") && !fld.edit) {
       raw=ce("span", {className: "fldvalue"}, value);     
@@ -1142,7 +1305,8 @@ var AutoEditFld = React.createClass({
       //if (value) html+=" value='"+value+"' ";   
       html+=" id='"+this.state.id+"' name='"+name+"'></input>"     
       raw=ce("div", {dangerouslySetInnerHTML: {__html:html}});      
-    } else if (fldtype=="boolean") {     
+    } else if (fldtype=="boolean") {
+      if (autoid) params.autoid = autoid;        
       raw=ce(AutoEditFldBoolean, params);
     } else if ((autoutils.isArrayType(fldtype) && arraysubtype=="string") &&
                 (!_.has(fld,"values") || !fld["values"]) ) {
@@ -1150,28 +1314,33 @@ var AutoEditFld = React.createClass({
       params["datatype"]="array:string";                  
       params["callback"]=this.handleComplexChange; 
       params["auxdata"]=this.props.auxdata;
+      if (autoid) params.autoid = autoid;                  
       raw=ce(AutoEditFldStringArray, params);                          
     } else if ((autoutils.isArrayType(fldtype) && arraysubtype=="string") &&
                 (_.has(fld,"values") && fld["values"] && _.isArray(fld["values"])) ) {
       // multiple select
       params["datatype"]="array:string";
       params["callback"]=this.handleMultipleChange;
+      if (autoid) params.autoid = autoid;                  
       raw=ce(AutoEditFldMultiple, params);  
     } else if (!autoutils.isArrayType(fldtype) && 
                _.has(fld,"values") && fld["values"] && _.isArray(fld["values"]) ) {
       // single select
+      if (autoid) params.autoid = autoid;                 
       raw=ce(AutoEditFldOption, params); 
     } else if (autoutils.isArrayType(fldtype) && autoutils.isRefType(arraysubtype)) {
       // array of references
       params["datatype"]="array:string";
       params["callback"]=this.handleComplexChange;
       params["auxdata"]=this.props.auxdata;
+      if (autoid) params.autoid = autoid;
       raw=ce(AutoEditFldStringArray, params);                 
     } else if ((autoutils.isArrayType(fldtype) && arraysubtype) ||
                (value && _.isArray(value) && value[0] && _.isObject(value[0]) && !_.isArray(value[0])) ) {
       // complex: array of objects
       params["callback"] = this.handleComplexChange;
       params["auxdata"] = this.props.auxdata;
+      if (autoid) params.autoid = autoid;
       raw = ce(AutoEditFldComplex, params);
       // TODO: FIX THIS!
     /*} else if ((!autoutils.isArrayType(fldtype) && !autoutils.isSimpleType(fldtype))) {
@@ -1184,6 +1353,7 @@ var AutoEditFld = React.createClass({
                         //value: filename,
                         name:name, "data-type": "base64", "data-encoding": "base64",                               
                        "data-save":'value', "autoComplete":"off", onChange:this.handleFileChange};
+      if (autoid) widgetparams.id = autoid;                       
       raw=ce("input", widgetparams); 
     } else if (isSearchType(fldtype)) {
       raw=ce(AutoEditFldSearch,{
@@ -1196,6 +1366,8 @@ var AutoEditFld = React.createClass({
              complexCallback: this.props.complexCallback,  
              //searchValue:this.state.searchValue,
              datarow: this.props.datarow,
+             autoid: autoid, 
+             parent:this.props.parent,
              auxdata: this.props.auxdata}
       );             
     } else { 
@@ -1206,6 +1378,7 @@ var AutoEditFld = React.createClass({
       }  
       var widgetparams={type:"text", className:cssclass, name:name, value:value, "data-type": fldtype,                               
                        "data-save":'value', onChange:this.handleChange};
+      if (autoid) widgetparams.id=autoid;                       
       if (fldtype==="json") widgetparams["data-encoding"]="json";                
       if (widgetparams.value===null) widgetparams.value="";                       
       if (fld && fld["mustFill"]===true) widgetparams["data-mustfill"]="true";                       
@@ -1225,20 +1398,20 @@ var AutoEditFld = React.createClass({
   }  
 });
 
-  function isSearchType(fldtype) {
-    return autoutils.isRefType(fldtype);
-    /*
-    if (fldtype=="ref:infosystem") return true;
-    if (fldtype=="ref:service") return true;
-    if (fldtype=="ref:classifier") return true;
-    if (fldtype=="ref:infosystem_by_id") return true;
-    if (fldtype=="ref:function") return true;
-    if (fldtype=="ref:organization") return true;
-    //if (fldtype=="ref:person") return true;
+function isSearchType(fldtype) {
+  return autoutils.isRefType(fldtype);
+  /*
+  if (fldtype=="ref:infosystem") return true;
+  if (fldtype=="ref:service") return true;
+  if (fldtype=="ref:classifier") return true;
+  if (fldtype=="ref:infosystem_by_id") return true;
+  if (fldtype=="ref:function") return true;
+  if (fldtype=="ref:organization") return true;
+  //if (fldtype=="ref:person") return true;
 
-    return false;
-    */
-  }
+  return false;
+  */
+}
 
   /*
 
@@ -1275,6 +1448,7 @@ var AutoEditFldSearch= React.createClass({
     var idfldname=getDynamicSearchIdFieldName(fldtype);
     var namefldname=getDynamicSearchNameFieldName(fldtype);
     var searchValue = autoutils.replaceWithAux(this.props.value, this.props.auxdata, fldtype);
+    if (this.props.value && this.props.value===searchValue) searchValue="";
     return {value:this.props.value, searchValue: searchValue, dynoptions:null,
             fld:fld, fldtype:fldtype, selindex:null,
             kind:kind, idfldname:idfldname, namefldname:namefldname};
@@ -1299,7 +1473,7 @@ var AutoEditFldSearch= React.createClass({
         var filter = null;
         if (_.has(this.state.fld, 'restriction')) {
           var restriction = this.state.fld.restriction;
-          filter=autoutils.makeFilterFromRestriction(restriction,this.props.datarow);
+          filter=autoutils.makeFilterFromRestriction(restriction,this.props.datarow,this.props.parent);
         }
 
         autoapi.dynamicSearchByName(this,this.state.fldtype,input.value,
@@ -1340,6 +1514,7 @@ var AutoEditFldSearch= React.createClass({
              onChange:this.handleChange,key:name+"_dynfieldsfinal"+this.props.parentName+this.props.arrayIndex,
              value:val1};      
     if (this.props.id) params1["id"]=this.props.id; 
+    else if (this.props.autoid) params1["id"]=this.props.autoid;              
     if (this.props["data-filter"]) params1["data-filter"]=this.props["data-filter"];                   
     if (!this.props.nosave) params1["data-save"]="value";
     if (fld && fld["mustFill"]===true) params1["data-mustfill"]="true";                       
@@ -1403,7 +1578,8 @@ function getDynamicSearchKind(fldtype) {
 }
 
 function getDynamicSearchIdFieldName(fldtype) {
-  return getDynamicSearchParamFieldName(fldtype,"refField","main_resource_id");
+  if (autoutils.isIdType(fldtype)) return getDynamicSearchParamFieldName(fldtype,"key","main_resource_id");
+  return getDynamicSearchParamFieldName(fldtype,"refField","uri");
 }
 
 function getDynamicSearchNameFieldName(fldtype) {
@@ -1612,7 +1788,7 @@ var AutoEditFldStringArray= React.createClass({
     var isSearchSubtype = isSearchType(arraysubtype);
     if (val) {    
       for(i=0;i<val.length;i++) {
-        if (isSearchSubtype) modval=autoutils.replaceWithAux(val[i],this.props.auxdata,arraysubtype,"both");
+        if (isSearchSubtype) modval=autoutils.replaceWithAux(val[i],this.props.auxdata,arraysubtype,"value");
         else modval=val[i];
         if (_.isObject(modval)) continue;
         row=ce("div",{key:makeKey("complex_carr"+i), className: "autoSimpleArrayRow"},         
@@ -1671,6 +1847,7 @@ var AutoEditFldBoolean= React.createClass({
     if (this.props.filtertype) properties["data-filter"]=this.props.filtertype;
     if (this.props.name) properties["name"]=this.props.name;
     if (this.props.parentName) properties["data-parentname"]=this.props.parentName;
+    if (this.props.autoid) properties["id"]=this.props.autoid;                   
     if (this.props.arrayIndex || this.props.arrayIndex===0) properties["data-arrayindex"]=this.props.arrayIndex; 
     if (properties.value===null) properties.value="";
     return (
@@ -1687,7 +1864,8 @@ var AutoEditFldOption= React.createClass({
   displayName: 'AutoEditFldOption',
   render: function() {
     var values=this.props.field["values"];
-    var options = [], ovalue="", svalue="", found=false, i=0;
+    var options = [], ovalue="", svalue="", found=false, i=0, altvalue=null;
+    if (_.isNumber(this.props.value)) altvalue=this.props.value.toString();    
     if (this.props.filtertype) {
       if (values && values[0][0]) {
         options.push(ce("option",{key:makeKey("option"), value:""},""));
@@ -1700,8 +1878,8 @@ var AutoEditFldOption= React.createClass({
         ovalue=ovalue[0];
       } else {  
         svalue=ovalue;
-      }  
-      if (ovalue===this.props.value) found=true; // initial value was found in list
+      }   
+      if (ovalue===this.props.value || (altvalue && ovalue===altvalue)) found=true; // initial value was found in list
       options.push(ce("option",{key:makeKey("option_el"+ovalue+"_"+i), value:ovalue},svalue));
     }
     if (this.props.rowid!==null && !found) {
@@ -1715,7 +1893,8 @@ var AutoEditFldOption= React.createClass({
     if (this.props.filtertype) properties["data-filter"]=this.props.filtertype;            
     if (this.props.parentName) properties["data-parentname"]=this.props.parentName;
     if (this.props.arrayIndex || this.props.arrayIndex===0) properties["data-arrayindex"]=this.props.arrayIndex; 
-    if (properties.defaultValue===null) properties.defaultValue="";                
+    if (properties.defaultValue===null) properties.defaultValue=""; 
+    if (this.props.autoid) properties.id=this.props.autoid;                
     return ce("select", properties, options);
   }  
 });
@@ -1744,17 +1923,20 @@ var AutoEditFldMultiple= React.createClass({
         options.push(ce("option",{key:makeKey("option_el"+String(i)+"_"+String(j)+datavalues[j]), 
                                   value:datavalues[j]},datavalues[j]));
     }
+    /*
     if (this.props.rowid!==null && !found && false) {
       // original value in edit not given in values list in viewdef: add as the last element
       options.push(ce("option",{key:makeKey("multiple_extra"), 
                                 value:this.props.value},this.props.value));
-    }        
+    } 
+    */       
     var properties={multiple:true, name:this.props.name, onChange:this.props.callback, defaultValue:datavalues,
                    "data-save":'value', "data-type": this.props.datatype,
                    className: "autoMultiple"};
     if (this.props.parentName) properties["data-parentname"]=this.props.parentName;
     if (this.props.arrayIndex || this.props.arrayIndex===0) properties["data-arrayindex"]=this.props.arrayIndex;
-    if (properties.defaultValue===null) properties.defaultValue="";                     
+    if (properties.defaultValue===null) properties.defaultValue="";
+    if (this.props.autoid) properties.id=this.props.autoid;                   
     return ce("select",properties, options);
   }  
 });
@@ -1916,16 +2098,19 @@ function conditionalHideField(field,val,datarow) {
 
 function fieldValue(val,fld,showcontext,datarow, auxdata) {
   var tmp,i,j,fldtype,keys,values;
+  //console.log(val);
+  //console.log(fld);
   //if (_.has(field,"label")) return fldtrans(field["label"]);
   /*
-  if (fld && fld.name=="contact_persons") {
-    console.log("contact_persons: ");
+  if (fld && fld.name=="access_restriction") {
+    console.log("access_restriction: ");
     console.log(fld);
     console.log(val);
     console.log(showcontext);
     console.log(auxdata);
   }
-  
+  */
+  /*
   if (fld && fld.name=="organizations") {
     console.log("organizations: ");
     console.log(fld);
@@ -1933,9 +2118,7 @@ function fieldValue(val,fld,showcontext,datarow, auxdata) {
     console.log(showcontext);
     console.log(auxdata);
   }
-  */      
-  
-  
+  */  
   if (_.isBoolean(val)) {
     if (val) tmp="yes";
     else tmp="no";
@@ -1947,7 +2130,12 @@ function fieldValue(val,fld,showcontext,datarow, auxdata) {
   else fldtype="string"; 
   if (fldtype==="date") {
     val=autoutils.dateToLocal(val); 
+    //datestr=new Date().toJSON().slice(0,10);
+    //console.log("datestr "+datestr);
+    //if (val && val.startsWith(datestr)) val=val.slice(10);
     return String(val);
+  } else if (fldtype==="datetime" || fldtype==="timestamp") {
+    return autoutils.formatDate(String(val));    
   } else if (fldtype==="json") {
     val=JSON.stringify(val);
     //val=autoutils.htmlEscape(val);
@@ -1956,6 +2144,7 @@ function fieldValue(val,fld,showcontext,datarow, auxdata) {
     // file content
     if (!val) return "";
     if (datarow && datarow["document_id"]) {
+      if (!datarow["mime"]) return "";
       val=makeDocumentUrl(datarow["document_id"],val);
       var filename;
       if (datarow["filename"]) filename=datarow["filename"];
@@ -2014,7 +2203,7 @@ var ShowRefField = React.createClass({
   render: function () {
     var uriValue = String(this.props.children);
     var link = autoutils.getLinkForUri(uriValue);
-    var value = autoutils.replaceWithAux(uriValue, this.props.auxdata, this.props.type, "both");
+    var value = autoutils.replaceWithAux(uriValue, this.props.auxdata, this.props.type, "value");
     if (link !== null) return ce(AutoLink, {href: link}, value);
     return ce("span", {}, String(value));
   }
@@ -2029,6 +2218,7 @@ var AutoLink = React.createClass({
 
   render: function () {
     // TODO: Replace with inner navigation?
+    //return ce("a", {href: this.props.href, target: "external"}, this.props.children);
     return ce("span", {}, this.props.children);
   }
 });
@@ -2077,8 +2267,13 @@ function getShownListValue(val,fld,fldtype, auxdata) {
 } 
 
 function getShownOptionValue(val,values) {
+  var sval=null;
+  if (_.isNumber(val)) sval=val.toString();
   for (var i=0; i<values.length; i++) {
-    if (_.isArray(values[i]) && val===values[i][0]) { val=values[i][1]; break }
+    if (_.isArray(values[i]) && (val===values[i][0] || (sval && sval===values[i][0]))) { 
+      val=values[i][1]; 
+      break;
+    }
   }
   return val;
 }
@@ -2095,7 +2290,7 @@ function getShownComplexValue(val,fldtype, auxdata) {
   arraysubtype=autoutils.arraySubtype(fldtype);
   subviewdef=getSubtypeViewdef(arraysubtype,val);
   if (subviewdef) subflds=autoutils.orderFields(subviewdef["fields"]);  
-  var i,j,keys,tmp=[];    
+  var i,j,keys,tmp=[];
   for(i=0;i<val.length;i++) {
     keys=_.keys(val[i]);
     keys=sortSubObjectKeys(keys,subflds);
@@ -2201,6 +2396,7 @@ exports.AutoList = AutoList;
 exports.AutoListHeaderCol = AutoListHeaderCol;
 exports.AutoScrollButtons = AutoScrollButtons;
 exports.AutoRow = AutoRow;
+exports.AutoText = AutoText;
 exports.AutoView = AutoView;
 exports.AutoViewButtons = AutoViewButtons;
 exports.AutoGroupMenu = AutoGroupMenu;

@@ -10,7 +10,7 @@ var viewdefs = [
     "refField" : "id",
     "nameField" : "username",
     "fields" : [
-      {"name":"id", "type":"integer","edit":0, "addShow":0,"listShow":1,"filter":1},  
+      {"name":"id", "type":"integer", "auto":1, "edit":0, "addShow":0,"listShow":1,"filter":1},  
       {"name":"username", "type":"string", "listShow":1, "filter":1, "help": " std username or facebook:0013230 or google:233320111"},
       {"name":"service", "type":"string", "listShow":0, "filter":0, "help": " null or facebook or google"},
       {"name":"service_uid", "type":"string", "listShow":0, "filter":1, "help": " null or user id in facebook or google"},
@@ -58,7 +58,7 @@ var viewdefs = [
    // "locations": # all identified locations, small and large
     {
     "name" : "locations",
-    "table" : "installations",  
+    "table" : "locations",  
     "key" : "id",      
     "refField" : "id",
     "nameField" : "name",

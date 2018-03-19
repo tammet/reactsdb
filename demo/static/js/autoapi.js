@@ -14,8 +14,7 @@ function convertParams(params) {
   var i,j,key,keys,tmp,lst,flt,res={};
   if (!params || _.isEmpty(params)) return params;
   keys=_.keys(params);
-  console.log("params");
-  console.log(params);    
+  //console.log(params);    
   for(i=0;i<keys.length;i++) {
     key=keys[i];
     if (key=="kind") continue;
@@ -59,7 +58,7 @@ function convertParams(params) {
     } else if (key=="filter") {      
       lst=[];
       flt=params["filter"];
-      console.log(flt);
+      //console.log(flt);
       for (j=0;j<flt.length;j++) {
         if (flt[j][0]=="kind") continue;
         lst.push(flt[j][0]);
@@ -243,7 +242,8 @@ var handleGetRequest = function (urlSuffix, callback, isLong) {
  */
 
 var getList = function(ctx, op, viewdef, stateparams) {
-  if (!_.has(viewdef, 'list_templates')) return getListSingle(ctx,op,viewdef,stateparams);
+  //if (!_.has(viewdef, 'list_templates')) return getListSingle(ctx,op,viewdef,stateparams);
+  if (!_.has(viewdef, 'list_templates')) return getCountedListSingle(ctx,op,viewdef,stateparams);
 
   // Query over multiple templates:
   var context = {
@@ -321,138 +321,77 @@ var joinArray = function (arr, offset, limit) {
   return dest;
 };
 
-// getList first gets a count, then calls getPureList to get list data
-
-var getListSingle = function(ctxt,op,viewdef,stateparams) {
-  autoutils.debug("calling getList");
-  //autoutils.debug(stateparams.forcefilter);
+function makeListFilterParams(ctxt,op,viewdef,stateparams) {
   var origforcefilter=stateparams.forcefilter;
-  var offset=stateparams["offset"];
-  var limit=stateparams["limit"];
-  var sortkey=stateparams["sortkey"];
-  var down=stateparams["down"];  
-  autoutils.debug("stateparams");
-  autoutils.debug(stateparams);
-  var filter=autoutils.getStateParamsFilter(stateparams); 
-  autoutils.debug("filter in getList");
-  autoutils.debug(filter);
+  var filter=autoutils.getStateParamsFilter(stateparams);   
   var params=autoutils.makeFilterParams(ctxt,op,viewdef);
-  //autoutils.debug("params in getList");
-  //autoutils.debug(params);
+  var tmp;
+  if (stateparams.preaction=="reset") params["filter"]=[];
   if (filter && params) {    
     if (params["filter"] && _.isArray(params["filter"]))
       params["filter"]=params["filter"].concat(filter);
     else
       params["filter"]=filter; 
   }    
-  //autoutils.debug("origforcefilter");
-  //autoutils.debug(origforcefilter);
   if (origforcefilter && !_.isEmpty(origforcefilter)) params.filter=origforcefilter;
-  /*
-  autoutils.debug("filter");
-  autoutils.debug(filter);
-  autoutils.debug("stateparams");  
-  autoutils.debug(stateparams);
-  */
   if (!origforcefilter) {
     if (params) stateparams.forcefilter=params.filter;
     var filterdata=autoutils.getFilterData(ctxt,op,viewdef);
     stateparams.filterdata=filterdata;
     autoutils.storeHistory(ctxt.state,stateparams);
   }  
-  
-  // temporary fix to rest api!!!
-  /*
+  if (viewdef.staticfilter) {
+    //tmp=[["status","=","A"]]; //"status,=,'A'"; //
+    if (params["filter"] && _.isArray(params["filter"]))
+      params["filter"]=params["filter"].concat(viewdef.staticfilter);
+    else
+      params["filter"]=viewdef.staticfilter;
+  }
+  // temporary fix to rest api!!!  
   if (params && params["filter"]) {
     var tmp=params["filter"];
     var tmp2=_.map(tmp,function(el) { return [el[0],el[1],String(el[2])] });
     params["filter"]=tmp2;    
   } 
-  */   
   // fix ended 
-  if (!params) return;
-  params["op"]="count";
-  var url=getApiUrl(ctxt,viewdef);
-  if (ctxt.props.dummyData) url=url+ctxt.props.countDummyData;  
-  autoutils.debug("url");
-  autoutils.debug(url);
-  var timeout=globalState.ajaxTimeout;
-  //if (viewdef && viewdef.name && viewdef.name=="infosystem") timeout=globalState.shortAjaxTimeout;
-  params=convertParams(params);
-  autoutils.debug("params");
-  autoutils.debug(params);
-  $.ajax({    
-    url: url,
-    dataType: 'json',
-    type: POST,
-    data: JSON.stringify(params),
-    cache: false,
-    timeout: timeout,
-    success: function(data) {    
-      autoutils.debug("getList json success");
-      if (isErrResponse(data)) {
-        console.error(url, data.toString());
-        ctxt.simpleUpdateState({op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
-      } else if (!data || !_.isObject(data) || !_.has(data,"count")) {
-        console.error(url, data.toString());
-        ctxt.simpleUpdateState({op:"list", action: null, alert:"danger", alertmessage: autolang.trans("wrong count")});        
-      } else {                         
-        if (data && data["count"]===0) {
-          autoutils.debug("getList to do ctxt.simpleUpdateState");
-          ctxt.simpleUpdateState({data: null, op:"list", action: null, count: 0, alert:false});
-        } else {  
-          //stateparams["count"]=data["ok"];
-          stateparams["count"]=data["count"];
-          console.log(stateparams["count"]);
-          getPureList(ctxt,op,viewdef,stateparams);       
-        }  
-      }  
-    }.bind(ctxt),
-    error: function(xhr, status, err) {    
-      autoutils.debug("getList json error");       
-      listError(ctxt,xhr,status,err);   
-    }.bind(ctxt)
-  });
-}    
+  return params;
+}  
 
-// normally we have got a count first; pureList gets data
-// then call getAuxData (if necessary) to translate codes to names
+function makeListNextState(oldstate,changes) {
+  var key,nextstate={}
+  //var changes={data: data, op:"list", action: null, alert:false}
+  for (key in oldstate) nextstate[key]=oldstate[key]; 
+  for (key in changes) nextstate[key]=changes[key];  
+  if (oldstate.preaction=="reset") {
+    nextstate.filterdata=null;
+    nextstate.preaction==null;
+  }
+  if (_.has(nextstate,"filter") && nextstate.preaction=="reset")
+    nextstate.preaction=null;
+  return nextstate;
+}
 
-var getPureList = function(ctxt,op,viewdef,stateparams) {
-  //autoutils.debug("calling getPureList with stateparams['count'] "+stateparams['count']);
-  var auxDataNeed,statepart;
+
+
+// getCountedListSingle first gets an answer containing both count and list data
+
+var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
+  autoutils.debug("calling getCountedListSingle");
+  var auxDataNeed,tmp,key,nextstate;
   var offset=stateparams["offset"];
   var limit=stateparams["limit"];
   var sortkey=stateparams["sortkey"];
-  var down=stateparams["down"];
-  var filter=autoutils.getStateParamsFilter(stateparams); 
-  var count=stateparams["count"];
-  var params = autoutils.makeFilterParams(ctxt,op,viewdef);
+  var down=stateparams["down"];  
+  var count=0;
+  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);  
   if (!params) return;
-  //autoutils.debug(stateparams);
-  if (filter) {
-    if (params["filter"] && _.isArray(params["filter"]))
-      params["filter"]=params["filter"].concat(filter);
-    else
-      params["filter"]=filter; 
-  }   
-  if (stateparams.forcefilter) params.filter=stateparams.forcefilter;
-  // temporary fix to rest api!!!
-  if (params && params["filter"]) {
-    var tmp=params["filter"];
-    var tmp2=_.map(tmp,function(el) { return [el[0],el[1],String(el[2])] });
-    params["filter"]=tmp2;    
-  }    
-  // fix ended     
   params["offset"]=offset;
   params["limit"]=limit;
+  params["op"]="countedlist";
   if (sortkey) {
     if (down) params["sort"]="-"+sortkey;
     else params["sort"]=sortkey;
-  }
-  //autoutils.debug("sorting by");
-  //autoutils.debug(params["sort"]);
-  //autoutils.debug(params); 
+  } 
   var url=getApiUrl(ctxt,viewdef);
   if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
   params=convertParams(params);
@@ -466,20 +405,173 @@ var getPureList = function(ctxt,op,viewdef,stateparams) {
     success: function(data) {    
       if (isErrResponse(data)) {
         console.error(url, data.toString());
-        ctxt.simpleUpdateState({op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+        ctxt.simpleUpdateState(
+          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])}));
       } else {                             
         if (!viewdef) {
           viewdef=autoutils.autoBuildViewdef(data);
-          ctxt.simpleUpdateState({data: data, op:"list", action: null, count: count, viewdef: viewdef});
-        } else {                    
-          auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});
-          statepart={data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit};
+          ctxt.simpleUpdateState(
+            makeListNextState(stateparams,{data: data.list, op:"list", action: null, count: data.count, viewdef: viewdef}));
+        } else {               
+          var i,tmp=[];
+          count=data.count;
+          data=data.list;
+          if (viewdef.name=="main_alerts") {
+            for(i=0;i<data.length;i++) {
+              if (data[i]["msg_type"]!="usercommand") tmp.push(data[i]);
+            }
+            data=tmp;
+          }          
+          if (viewdef.name=="main_media") {
+            for(i=0;i<data.length;i++) {
+              //console.log("|"+data[i]["duration"]+"|");
+              if (data[i]["duration"]=="00:00:00") data[i]["duration"]="";
+            }
+          } 
+          auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});          
+          nextstate=makeListNextState(stateparams,
+             {data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit});                   
           if (!_.isEmpty(auxDataNeed)) {
             autoutils.debug("getPureList to do getAuxData");
-            getAuxData(ctxt,url,auxDataNeed,statepart); 
+            getAuxData(ctxt,url,auxDataNeed,nextstate); 
           } else {
-            autoutils.debug("getPureList to do ctxt.simpleUpdateState");                        
-            ctxt.simpleUpdateState(statepart);
+            //autoutils.debug("getPureList to do ctxt.simpleUpdateState");                        
+            ctxt.simpleUpdateState(nextstate);
+          }  
+        }        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+  
+
+// getList first gets a count, then calls getPureList to get list data
+
+var getListSingle = function(ctxt,op,viewdef,stateparams) {
+  autoutils.debug("calling getCountedListSingle from getListSingle");
+  return getCountedListSingle(ctxt,op,viewdef,stateparams);
+  /*
+  var offset=stateparams["offset"];
+  var limit=stateparams["limit"];
+  var sortkey=stateparams["sortkey"];
+  var down=stateparams["down"];  
+  var nextstate;
+  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);
+  //console.log(JSON.stringify(params));
+  if (!params) return;
+  params["op"]="count";
+  var url=getApiUrl(ctxt,viewdef);
+  if (ctxt.props.dummyData) url=url+ctxt.props.countDummyData;  
+  //autoutils.debug("url");
+  //autoutils.debug(url);
+  var timeout=globalState.ajaxTimeout;
+  //if (viewdef && viewdef.name && viewdef.name=="infosystem") timeout=globalState.shortAjaxTimeout;
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: timeout,
+    success: function(data) {    
+      if (isErrResponse(data)) {
+        console.error(url, data.toString());
+        ctxt.simpleUpdateState(
+          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])}));
+      } else if (!data || !_.isObject(data) || !_.has(data,"count")) {
+        console.error(url, data.toString());
+        ctxt.simpleUpdateState(
+          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans("wrong count")}));        
+      } else {                         
+        if (data && data["count"]===0) {
+          autoutils.debug("getList to do ctxt.simpleUpdateState");
+          ctxt.simpleUpdateState(
+            makeListNextState(stateparams,{data: null, op:"list", action: null, count: 0, alert:false}));
+        } else {  
+          //stateparams["count"]=data["ok"];
+          stateparams["count"]=data["count"];
+          nextstate=makeListNextState(stateparams);
+          getPureList(ctxt,op,viewdef,nextstate);              
+        }  
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {     
+      listError(ctxt,xhr,status,err);   
+    }.bind(ctxt)
+  });
+  */
+}    
+
+// normally we have got a count first; pureList gets data
+// then call getAuxData (if necessary) to translate codes to names
+
+var getPureList = function(ctxt,op,viewdef,stateparams) {
+  //autoutils.debug("calling getPureList with stateparams['count'] "+stateparams['count']);
+  //console.log(stateparams.filterdata);
+  var auxDataNeed,tmp,key,nextstate;
+  var offset=stateparams["offset"];
+  var limit=stateparams["limit"];
+  var sortkey=stateparams["sortkey"];
+  var down=stateparams["down"];  
+  var count=stateparams["count"];
+  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);  
+  if (!params) return;
+  params["offset"]=offset;
+  params["limit"]=limit;
+  if (sortkey) {
+    if (down) params["sort"]="-"+sortkey;
+    else params["sort"]=sortkey;
+  } 
+  var url=getApiUrl(ctxt,viewdef);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {    
+      if (isErrResponse(data)) {
+        console.error(url, data.toString());
+        ctxt.simpleUpdateState(
+          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])}));
+      } else {                             
+        if (!viewdef) {
+          viewdef=autoutils.autoBuildViewdef(data);
+          ctxt.simpleUpdateState(
+            makeListNextState(stateparams,{data: data, op:"list", action: null, count: count, viewdef: viewdef}));
+        } else {     
+          
+          var i,tmp=[];
+          if (viewdef.name=="main_alerts") {
+            for(i=0;i<data.length;i++) {
+              if (data[i]["msg_type"]!="usercommand") tmp.push(data[i]);
+            }
+            data=tmp;
+          }
+          if (viewdef.name=="main_media") {
+            for(i=0;i<data.length;i++) {
+              console.log("|"+data[i]["duration"]+"|");
+              if (data[i]["duration"]=="00:00") data[i]["duration"]="";
+            }
+            //data=tmp;
+          } 
+          
+          auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});          
+          nextstate=makeListNextState(stateparams,
+             {data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit});                   
+          if (!_.isEmpty(auxDataNeed)) {
+            autoutils.debug("getPureList to do getAuxData");
+            getAuxData(ctxt,url,auxDataNeed,nextstate); 
+          } else {
+            //autoutils.debug("getPureList to do ctxt.simpleUpdateState");                        
+            ctxt.simpleUpdateState(nextstate);
           }  
         }        
       }  
@@ -712,6 +804,7 @@ var saveRecord = function(ctxt,op,viewdef,parent) {
     url: url,
     dataType: 'json',
     type: POST,
+    contentType:"application/json; charset=utf-8",
     timeout: globalState.ajaxTimeout,
     data: JSON.stringify(params),
     success: function(data) {
@@ -760,7 +853,7 @@ var saveRecord = function(ctxt,op,viewdef,parent) {
       else if (xhr && _.isObject(xhr) && xhr["responseJSON"]) 
         alertmessage=autolang.trans("Error")+": "+xhr["responseJSON"]["errmsg"]; 
       else 
-        alertmessage: autolang.trans("Connection error")+": "+autolang.trans(err);        
+        alertmessage=autolang.trans("Connection error")+": "+autolang.trans(err);        
       ctxt.simpleUpdateState({op:"edit", action: null, alert:"danger", alertmessage: alertmessage});        
     }.bind(ctxt)
   });
@@ -778,6 +871,7 @@ var deleteRecord = function(ctxt,op,viewdef,id,parent) {
     url: url,
     dataType: 'json',
     type: POST,
+    contentType:"application/json; charset=utf-8",
     data: JSON.stringify(args),   
     cache: false,
     timeout: globalState.ajaxTimeout,
@@ -830,6 +924,7 @@ var submitApproval = function(ctxt,viewdef,data,parent) {
     //url: url,+
     dataType: 'json',
     type: 'POST',
+    contentType:"application/json; charset=utf-8",
     data: JSON.stringify(args),   
     cache: false,
     timeout: globalState.ajaxTimeout,
@@ -881,6 +976,7 @@ var createNewVersion = function(ctxt,op,viewdef,id,uri,newnr,parent) {
     url: url,
     dataType: 'json',
     type: POST,
+    contentType:"application/json; charset=utf-8",
     data: JSON.stringify(args),   
     cache: false,
     timeout: globalState.ajaxTimeout,
@@ -955,6 +1051,7 @@ var dynamicSearchByName = function(ctxt,type,name,kind,idfldname,namefldname, fi
     url: url,
     dataType: 'json',
     type: POST,
+    contentType:"application/json; charset=utf-8",
     data: JSON.stringify(params),
     cache: false,
     timeout: globalState.ajaxTimeout,
@@ -975,12 +1072,431 @@ var dynamicSearchByName = function(ctxt,type,name,kind,idfldname,namefldname, fi
       else if (xhr && _.isObject(xhr) && xhr["responseJSON"]) 
         alertmessage=autolang.trans("Error")+": "+xhr["responseJSON"]["errmsg"]; 
       else 
-        alertmessage: autolang.trans("Connection error")+": "+autolang.trans(err);        
+        alertmessage=autolang.trans("Connection error")+": "+autolang.trans(err);        
       ctxt.simpleUpdateState({op:"edit", action: null, alert:"danger", alertmessage: alertmessage});
     }.bind(ctxt)
   });
 }    
 
+// ====== overview functions =======
+
+
+var getOverview = function(ctxt) {
+  autoutils.debug("calling getOverview");
+  //var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    contentType:"application/json; charset=utf-8",
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, data.toString());
+        ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+      } else {                                                          
+        statepart={data: data, op:"overview", action: null, alert:false};          
+        autoutils.debug("getOverview successful");                        
+        console.log(url, data.toString());
+        ctxt.simpleUpdateState(statepart); 
+        //ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+
+// ====== devices functions =======
+
+
+var getDevices = function(ctxt) {
+  autoutils.debug("calling getDevices");
+  //var statepart,params = {"op":"devices","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"devices","token":autoutils.getAuthToken()};
+  //autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    contentType:"application/json; charset=utf-8",
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, data.toString());
+        ctxt.updateState({op:"devices", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+      } else {                                                          
+        statepart={data: data, op:"devices", action: null, alert:false};          
+        autoutils.debug("getDevices successful");                        
+        console.log(url, data.toString());
+        ctxt.simpleUpdateState(statepart); 
+        //ctxt.updateState({op:"devices", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+
+// get all one device data
+
+var getOneDevice = function(ctxt,viewdef,id) {
+  var auxDataNeed,statepart;
+  var url=getApiUrl(ctxt,viewdef);  
+  var args={"op":"get","path": autoutils.getPath(viewdef)+id,            
+            "token":autoutils.getAuthToken()};
+  args=convertParams(args);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    contentType:"application/json; charset=utf-8",
+    data: JSON.stringify(args),   
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {    
+      if (isErrResponse(data)) {
+        console.error(url, data.toString());
+        ctxt.simpleUpdateState({op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});                    
+      } else {  
+        //autoutils.debug("getOneDevice to do ctxt.simpleUpdateState");
+        statepart={data: data, op:"onedevice", rowid: id, action: null, alert:false, viewdef:viewdef};          
+        ctxt.simpleUpdateState(statepart);
+      }                       
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err);       
+    }.bind(ctxt)
+  });
+}    
+
+// ====== alerts functions =======
+
+
+var getAlerts = function(ctxt) {
+  autoutils.debug("calling getAlerts");
+  //var statepart,params = {"op":"alerts","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"alerts","token":autoutils.getAuthToken()};
+  //autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, data.toString());
+        ctxt.updateState({op:"alerts", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+      } else {                                                          
+        statepart={data: data, op:"alerts", action: null, alert:false};          
+        autoutils.debug("getAlerts successful");                        
+        console.log(url, data.toString());
+        ctxt.simpleUpdateState(statepart); 
+        //ctxt.updateState({op:"alerts", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+// ====== messages functions =======
+
+
+var getMessages = function(ctxt,oldstate) {
+  autoutils.debug("calling getMessages");
+  console.log(JSON.stringify(oldstate));
+  //var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  //autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, data.toString());
+        ctxt.updateState({op:"messages", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+      } else {                                                          
+        statepart={data: data, op:"messages", action: null, alert:false}; 
+        console.log("oldstate2: "+JSON.stringify(oldstate));        
+        if (oldstate.alert) {
+          statepart.alert=oldstate.alert;
+          statepart.alertmessage=oldstate.alertmessage;
+        }     
+        autoutils.debug("getMessages successful");                        
+        ctxt.simpleUpdateState(statepart); 
+        //ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+
+
+var sendMessages = function(ctxt,update) {
+  autoutils.debug("calling sendMessages");
+  //var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"sendmessage","token":autoutils.getAuthToken(), 
+     "deviceid": update.deviceid, "text":update.text};
+  autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {      
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, JSON.stringify(data));
+        statepart={data: data, op:"messages", action: "showsentandload", 
+                   alert: "danger", alertmessage:"error: "+JSON.stringify(data)};
+        ctxt.updateState(statepart);        
+      } else {                                                          
+        //statepart={data: data, op:"messages", action: "loaddata", alert:false};          
+        autoutils.debug("sendMessages successful");                                       
+        console.log(url, JSON.stringify(data));
+        statepart={op:"onedevice", action: "showsent", 
+                  alert: "info", alertmessage:"message queued for sending",
+                  viewdef: autoutils.getViewdef("onedevice"),
+                  id:update.deviceid};
+                  //data: null};
+        ctxt.updateState(statepart); 
+        //ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+// ====== deviceConf functions =======
+
+
+var getDeviceConf = function(ctxt,oldstate) {
+  autoutils.debug("calling getDeviceConf");
+  console.log(JSON.stringify(oldstate));
+  //var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  //autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, data.toString());
+        ctxt.updateState({op:"deviceconf", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
+      } else {                                                          
+        statepart={data: data, op:"deviceconf", action: null, alert:false}; 
+        console.log("oldstate2: "+JSON.stringify(oldstate));        
+        if (oldstate.alert) {
+          statepart.alert=oldstate.alert;
+          statepart.alertmessage=oldstate.alertmessage;
+        }     
+        autoutils.debug("getDeviceConf successful");                        
+        ctxt.simpleUpdateState(statepart); 
+        //ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+
+
+var sendDeviceConf = function(ctxt,update) {
+  autoutils.debug("calling sendDeviceConf");
+  //var statepart,params = {"op":"overview","token":autoutils.getAuthToken()};
+  var statepart,params = {"op":"senddeviceconf","token":autoutils.getAuthToken(), 
+     "deviceid": update.deviceid, "struct":update.conf};
+  autoutils.debug(params); 
+  var url=getApiUrl(ctxt,null);
+  if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;    
+  params=convertParams(params);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {      
+      if (isErrResponse(data)) {
+        autoutils.debug("api error");
+        console.error(url, JSON.stringify(data));
+        //statepart={data: data, op:"deviceconf", action: "showsentandload", 
+        //           alert: "danger", alertmessage:"error: "+JSON.stringify(data)};
+        statepart={op:"onedevice", action: "showsent", 
+                  alert: "danger", alertmessage:"error: "+JSON.stringify(data),
+                  viewdef: autoutils.getViewdef("onedevice"),
+                  id:update.deviceid};                        
+        ctxt.updateState(statepart);        
+      } else {                                                          
+        //statepart={data: data, op:"messages", action: "loaddata", alert:false};          
+        autoutils.debug("sendDeviceConf successful");                                       
+        console.log(url, JSON.stringify(data));
+        statepart={op:"onedevice", action: "showsent", 
+                  alert: "info", alertmessage:"device conf queued for sending",
+                  viewdef: autoutils.getViewdef("onedevice"),
+                  id:update.deviceid};
+                  //data: null};
+        ctxt.updateState(statepart); 
+        //ctxt.updateState({op:"overview", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});        
+      }  
+    }.bind(ctxt),
+    error: function(xhr, status, err) {
+      listError(ctxt,xhr,status,err); 
+    }.bind(ctxt)
+  });
+}    
+
+// ======= logs and processes etc =========
+
+var getLog = function(ctxt,op,logname,stateparams) {
+  autoutils.debug("calling getLog");
+  var nextstate;
+  var params = {"op":"getlog","name":logname,"token":autoutils.getAuthToken()};
+  var url=getApiUrl(null,null);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        console.log("getLog error 1");
+        ajaxError(null,null,"error reading logs from server");     
+      } else {                     
+        nextstate=makeListNextState(stateparams,
+          {data: data, op:"plain", action: null, alert:false, viewdef:"dummy"});
+        ctxt.simpleUpdateState(nextstate);  
+      }  
+    },
+    error: function(xhr, status, err) {
+      console.log("getLog error 2");
+      ajaxError(null,null,"cannot read logs from server");
+    }
+  });
+}   
+
+// ====== settings =======
+
+
+
+var getSettings = function(callback) {
+  autoutils.debug("calling getSettings");
+  var statepart,params = {"op":"getsettings","token":autoutils.getAuthToken()};
+  var url=getApiUrl(null,null);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        console.log("getSettings error 1");
+        ajaxError(null,null,"error reading settings from server");
+        callback();       
+      } else {                     
+        //console.log("getSettings ok!");
+        //console.log(data);
+        globalState.initialSettings=data;
+        callback();        
+      }  
+    },
+    error: function(xhr, status, err) {
+      console.log("gtSettings error 2");
+      ajaxError(null,null,"cannot read settings from server");
+      callback();
+    }
+  });
+}    
+
+var setGroup = function(id) {
+  autoutils.debug("calling setGroup");
+  var nextstate;
+  var params = {"op":"setgroup","id":id,"token":autoutils.getAuthToken()};
+  var url=getApiUrl(null,null);
+  $.ajax({    
+    url: url,
+    dataType: 'json',
+    type: POST,
+    data: JSON.stringify(params),
+    cache: false,
+    timeout: globalState.ajaxTimeout,
+    success: function(data) {
+      if (isErrResponse(data)) {
+        console.log("setGroup error 1");
+        ajaxError(null,null,"error setting groups in server");     
+      } else {                     
+        /*
+        nextstate=makeListNextState(stateparams,
+          {data: data, op:"plain", action: null, alert:false, viewdef:"dummy"});
+        ctxt.simpleUpdateState(nextstate);  
+        */
+      }  
+    },
+    error: function(xhr, status, err) {
+      console.log("setGroup error 2");
+      ajaxError(null,null,"cannot set group in server");
+    }
+  });
+}   
 
 // ====== local functions =======
 
@@ -1030,6 +1546,7 @@ function debug(a,b,c,d,e) {
 exports.getApiUrl = getApiUrl;
 exports.getLogin = getLogin;
 exports.getUserFromToken = getUserFromToken;
+exports.isErrResponse = isErrResponse;
 exports.getList = getList;
 exports.getListSingle = getListSingle;
 exports.getPureList = getPureList;
@@ -1039,6 +1556,18 @@ exports.deleteRecord = deleteRecord;
 exports.submitApproval = submitApproval;
 exports.createNewVersion = createNewVersion;
 exports.dynamicSearchByName = dynamicSearchByName;
+exports.getOverview = getOverview;
+exports.getAlerts = getAlerts;
+exports.getDevices = getDevices;
+exports.getOneDevice = getOneDevice;
+exports.getMessages = getMessages;
+exports.sendMessages = sendMessages;
+exports.sendDeviceConf = sendDeviceConf;
+exports.getDeviceConf = getDeviceConf;
+exports.getLog = getLog;
+exports.getSettings = getSettings;
+exports.convertParams = convertParams;
+exports.setGroup = setGroup;
 
 // ====== module end ==========
 

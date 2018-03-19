@@ -127,6 +127,9 @@ var transTable={
 'Hide empty fields': ["Hide empty fields","Peida täitmata väljad"],
 'Cancel': ["Cancel","Katkesta"], 
 'Delete': ["Delete","Kustuta"],
+'Export data': ["Export data","Ekspordi andmed"],
+'Import data': ["Import data","Impordi andmed"],
+'Import': ["Import","Import"],
 'Add': ["Add","Lisa"], 
 'Open document': ["Open document","Ava dokument"], 
 'search text': ["search text","otsingutekst"],  
@@ -173,7 +176,13 @@ var transTable={
 'Not implemented': ["Not implemented","Ei ole realiseeritud",],
 'description'  : ["description","kirjeldus"],
 'wrong count'  : ["wrong count","vigane koguarv"],
-
+'File must contain json data in a proper form.': 
+  ['File must contain json data in a proper form.','Fail peab sisaldama õigel kujul json teksti.'],
+'Please select a file and then press Import.': 
+  ['Please select a file and then press Import.','Palun vali fail ja siis vajuta Import.'],
+'Import was successful'  : ["Import was successful","Import oli edukas"],
+'Please select a proper file' : ['Please select a proper file','Palun vali sobiv fail'],
+'File does not contain correct json': ['File does not contain correct json','Fail ei sisalda korrektset json teksti'],
 'Main data': ["Main data","Üldandmed"],
 
 'INFOSYSTEMS': ["INFOSYSTEMS","INFOSÜSTEEMID"],

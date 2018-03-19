@@ -44,12 +44,14 @@ function userLoggedIn() {
   
 function userAllowedEdit(viewdef, data) {
   //return isAccessRight(viewdef.object, data, 'update');
+  if (hasNegativeProperty(viewdef,"edit")) return false;
   return true;
 }
 
 function userAllowedDelete(viewdef, data) {
   //return isAccessRight(viewdef.object, data, 'delete');
-  return true;
+  if (hasNegativeProperty(viewdef,"delete")) return false;
+  else return true;
 }
 
 function userAllowedView(viewdef, data) {
@@ -233,7 +235,7 @@ exports.capitalizeFirstLetter(s) {
 
 function makeFilterParams(ctxt,op,viewdef) { 
   //debug("makeFilterParams");
-  var i=0,input,name,type,value,cond,deffields,field,fields=[],key,date;
+  var i=0,input,name,type,value,cond,deffields,field,fields=[],key,date,fieldtype;
   var args={},filter=[], kind, token;
   var valueInputs=$.find("[data-filter='value']");  
   var minvalueInputs=$.find("[data-filter='minvalue']");  
@@ -268,11 +270,18 @@ function makeFilterParams(ctxt,op,viewdef) {
     if (value && _.isString(value)) value=value.trim();
         
     field=_.findWhere(viewdef["fields"], {"name":name});
+    if (field && field.type) fieldtype=field.type;    
+    //console.log(name+" "+type+" "+fieldtype);    
     if (type==="string" && !(field && field["values"] && _.isArray(field["values"]))) {
       cond=[name,"ilike","%"+value+"%"];       
     } else if (type=="array:string") {
       if (_.isArray(value)) cond=[name,"?&",value];      
       else cond=[name,"?&",[value]]; 
+    } else if (fieldtype && fieldtype.startsWith("array:ref:")) {
+      if (_.isArray(value)) cond=[name,"?&",value];                  
+      //"[\"urn:fdc:riha.eesti.ee:2016:area:519048\"]"]]
+      //else cond=[name,"?&",[value]];      
+      else cond=[name,"?&",JSON.stringify([value])];
     } else {    
       cond=[name,"=",value];
     }  
@@ -424,6 +433,7 @@ function makeSaveParams(ctxt,viewdef,parent) {
   //if (!save["creation_date"]) save["creation_date"]=localDateTimeISO();
 
   // Apply filters (they contain also parent key assignement):
+  /*
   if (false) { // (parent && parent.filter) {
     var filter = parent.filter;
     for (var i = 0; i < filter.length; i++) {
@@ -434,7 +444,7 @@ function makeSaveParams(ctxt,viewdef,parent) {
   } else {
     // No parent. We should set "owner" field, if this is not update:
   }
-
+  */
   args["data"]=save;
   if (!filledok) return false;
   return args;  
@@ -446,6 +456,31 @@ function localDateTimeISO() {
   s+=pad0(d.getHours())+":"+pad0(d.getMinutes())+":"+pad0(d.getSeconds());
   return s;
 }
+
+function formatDate(isotimestr) {
+  var res,datestr=localDateTimeISO().slice(0,10);
+  if (isotimestr && isotimestr.startsWith(datestr)) res=isotimestr.slice(10);
+  else res=isotimestr;
+  return res; 
+}
+
+function formatDateEnd(start,end) {  
+  if (!start || start.length<14 || end.length<14) return end;
+  if (start.slice(0,10)===end.slice(0,10)) {
+    return end.slice(11);
+  } else {
+    return end;
+  }
+}
+
+/*
+function commonPrefix(array) {
+  var A=array.concat().sort(), 
+      a1=A[0], a2=A[A.length-1], L=a1.length, i=0;
+  while(i<L && a1.charAt(i)===a2.charAt(i)) i++;
+  return a1.substring(0,i);
+}
+*/
 
 function pad0(num) {
   var norm = Math.abs(Math.floor(num));
@@ -469,6 +504,11 @@ function formvalueToJson(value,type,encoding) {
     tmp=parseInt(value);
     if (tmp || tmp===0) return tmp;    
     else return null;
+  } else if (type=="number") {
+    if (!value && value!==0) return null;
+    tmp=Number(value);
+    if (isNaN(value)) return null;    
+    else return tmp;  
   } else if (type=="xxxxxfile") {  
     var fileCount,i;
     //debug(value);
@@ -633,7 +673,7 @@ function canChangeOwner(kind, data) {
   return actionLevel >= 2;
 }
 
-function makeFilterFromRestriction(r,data) {
+function makeFilterFromRestriction(r,data,parent) {
   var pairs,keyvals,i,el,kval,dval,res=[];
   if (!r) return [];
   pairs=r.split("&");
@@ -650,6 +690,9 @@ function makeFilterFromRestriction(r,data) {
       dval=kval;
     }
     el=[keyvals[0],"=",dval];
+    if (el[0]==="main_resource_id" && !el[2] && parent && parent.refkey===el[0] && parent.rowid) {
+      el[2]=parent.rowid;
+    }
     res.push(el);
   }
   return res;
@@ -794,7 +837,7 @@ function auxDataNeed(data,viewdef,currentAuxData) {
 }
 
 function auxDataNeedSingle(val,type,part) {
-  if (!_.isString(val)) return part;
+  if (val === undefined || val === null || val === "" || val === 0) return part;
   if (type=="ref:person") {
     if (!part.persons) part.persons=[val];
     else if (part.persons.indexOf(val)<0) part.persons.push(val);
@@ -804,6 +847,12 @@ function auxDataNeedSingle(val,type,part) {
   } else if (type=="ref:infosystem" ||  type=="ref:classifier" || type=="ref:service" || type=="ref:function") {
     if (!part.uris) part.uris=[val];
     else if (part.uris.indexOf(val)<0) part.uris.push(val);
+  } else if (type == "id:infosystem") {
+    if (!part.ids) part.ids = [val];
+    else if (part.ids.indexOf(val) < 0) part.ids.push(val);  
+  } else if (type == "ref:area") {
+    if (!part.uris) part.uris = [val];
+    else if (part.uris.indexOf(val) < 0) part.uris.push(val);
   }
   return part;  
 }
@@ -922,6 +971,12 @@ function isRefType(type) {
   else return false;
 }
 
+function isIdType(type) {
+    if (!type) return false;
+    if (type.indexOf("id:")===0) return true;
+    return false;
+}
+
 function refSubtype(type) {  
   if (!type) return null;
   if (type.indexOf("ref:")!==0) return null;
@@ -979,6 +1034,223 @@ function modalConfirm(desc,callback) {
   $("#confirmModal").modal('show');
 }
 
+function modalWizard(rules,callback) {
+  var show=makeWizardHtml(rules,{});
+  $("#wizardModalDescription").html(show);
+  $("#wizardModal").on('hidden.bs.modal', function (e) {      
+    $('#wizardModal').unbind('hidden.bs.modal');    
+    callback($("#wizardModalInput").val());
+  })
+  //$("#wizardModalInput").val("");
+  $("#wizardModal").modal('show');
+  makeWizardReact();
+}
+
+function makeWizardHtml(rules,prefill) {
+  //console.log(rules);
+  var html,case1,case2,v,v1,v2,tmp;
+  if (prefill===null) {
+    return null;
+  }
+  if (!rules || !_.isArray(rules)) {
+    html="<div class='wizardinner'>";
+    var txt="Jätkamiseks vajuta palun ok: ";
+    txt+=" seepeale avatakse osaliselt eeltäidetud vorm, mille täitmist ";
+    txt+=" tuleb jätkata. Kohustuslikud väljad on märgitud punase tärniga.";
+    txt+=" Osaliselt täidetud vormi saad vahepeal salvestada.";   
+    html+=autolang.trans(txt);
+    //html+="<p>+"+JSON.stringify(prefill)+"<p>";
+    case1='';    
+    prefill.infosystem_status="asutamine_sisestamisel";
+    $("#wizardModalInput").val(JSON.stringify(prefill));
+    html+="<p><button onclick='"+case1+"' class='btn btn-primary btn-sm trans' ";
+    html+=" data-dismiss='modal'>"
+    html+=autolang.trans("ok")+"</button>";    
+    html+="</div>";
+  } else {  
+    if (rules[3]) {
+      prefill=JSON.parse(JSON.stringify(prefill));
+      prefill=_.extend(prefill,rules[3]);
+    }  
+    html="<div class='wizardinner'>";
+    html+=rules[0]+"<p>";
+    //html+=JSON.stringify(prefill);
+    if (rules[2]=="boolean") {
+      v1=JSON.parse(JSON.stringify(prefill));
+      v1[rules[1]]=true;
+      v2=JSON.parse(JSON.stringify(prefill));
+      v2[rules[1]]=false;
+      case1='autoutils.replaceWizardHtml('+JSON.stringify(rules[4])+', ';
+      case1+=JSON.stringify(v1)+')';
+      case2='autoutils.replaceWizardHtml('+JSON.stringify(rules[5])+', ';
+      case2+=JSON.stringify(v2)+')';
+      html+="<button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
+      html+=autolang.trans("yes")+"</button>";
+      html+=" ";
+      html+="<button onclick='"+case2+"' class='btn btn-primary btn-sm trans'>";
+      html+=autolang.trans("no")+"</button>";      
+    } else if (rules[2] && rules[2].startsWith("ref:")) {
+      v1=JSON.stringify(prefill);
+      case1='autoutils.useWizardSelection('+JSON.stringify(rules[1])+', ';
+      case1+=JSON.stringify(rules[4])+', ';
+      case1+=v1+');';
+      html+="<button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
+      html+=autolang.trans("ok")+"</button>";
+      html+="<span id='wizardReactSwitch' style='display: none'>";
+      html+=JSON.stringify([rules[1],rules[2]]);
+      html+="</span>";
+    } else {
+      v1=JSON.stringify(prefill);
+      case1='autoutils.replaceWizardHtml('+JSON.stringify(rules[4])+', ';
+      tmp='autoutils.wizardGetValue('+v1+',"'+rules[1]+'")';
+      case1=case1+tmp+");";
+      html+="<input type='text' class='fldinput' name='"+rules[1]+"'";
+      html+=" id='wizard_"+rules[1]+"' >";
+      html+="<br><button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
+      html+=autolang.trans("ok")+"</button>";            
+    }  
+    html+="</div>";
+  }  
+  return html;
+}
+
+
+function tmptst(x) {
+  console.log("tmptst");
+  console.log(x);
+}
+
+function wizardGetValue(prefill,varname) {
+  var tmp,v;
+  v=JSON.parse(JSON.stringify(prefill));
+  tmp=$("#wizard_"+varname).val();
+  if (!tmp) {
+    var err=autolang.trans("Please enter value");
+    $("#wizardModalErr").html(err);
+    return null;
+  }  
+  v[varname]=tmp;
+  return v;
+}
+
+function replaceWizardHtml(rules,prefill) {
+  var show=makeWizardHtml(rules,prefill);
+  var err=autolang.trans("Please enter value");
+  if (show!==null) {
+    $("#wizardModalErr").html("");
+    $("#wizardModalDescription").html(show);  
+    makeWizardReact();
+  } else {
+    $("#wizardModalErr").html(err);
+  }    
+}
+
+var wizardReactElement=null;
+
+function makeWizardReact() {
+  var inputs,viewname,fldname,viewdef;
+  if (document.getElementById('wizardModalReact').innerHtml!=="" &&
+      document.getElementById('wizardReactSwitch') &&
+      $("#wizardReactSwitch").html()!=="") {
+    inputs=$("#wizardReactSwitch").html();
+    inputs=JSON.parse(inputs); 
+    fldname=inputs[0];        
+    viewname=inputs[1];
+    if (!viewname || !viewname.startsWith("ref:")) return;
+    viewname=viewname.substr(4);        
+    console.log(fldname);
+    console.log(viewname);
+    if (wizardReactElement) {
+      ReactDOM.unmountComponentAtNode(document.getElementById('wizardModalReact'));
+      wizardReactElement=null;
+    }          
+    viewdef=_.findWhere(globalState.viewdefs, {"name":viewname});
+    wizardReactElement=React.createElement(autoreact.AutoEditFldSearch,{
+             handleChange:tmptst,             
+             value:"",
+             viewdef:viewdef,
+             name:fldname, 
+             "data-filter": "value",
+             show: "searchfield",       
+             searchValue:""});     
+    ReactDOM.render(wizardReactElement, document.getElementById('wizardModalReact'));
+  } else {
+    if (wizardReactElement) {
+      ReactDOM.unmountComponentAtNode(document.getElementById('wizardModalReact'));
+      wizardReactElement=null;
+    } 
+  }    
+}
+
+function useWizardSelection(mainfld,next,vals) {
+  var rfieldsel,tmp,v;
+  rfieldsel="#wizardModalReact"+" input[name='"+mainfld+"']";
+  tmp=$(rfieldsel).val();
+  if (tmp) {
+    $("#wizard_"+mainfld).val(tmp);
+  }
+  if (!tmp) {
+    var err=autolang.trans("Please enter value");
+    $("#wizardModalErr").html(err);
+    return null;
+  }  
+  v=JSON.parse(JSON.stringify(vals));
+  v[mainfld]=tmp;
+  autoutils.replaceWizardHtml(next,v);
+}
+
+
+/* -------- import -------- */
+
+function showImportModal() {
+  $("#importModalOK").hide();
+  $("#importModalImport").show();
+  $("#importModalCancel").show();
+  $("#importModalResult").html("");
+  $("#importModalValue").val("");
+  $("#importModalFile").val("");
+  $('#importModal').modal('show');
+}
+
+function showImportModalResult(txt) {
+  $("#importModalResult").html(txt);
+  $("#importModalOK").show();
+  $("#importModalImport").hide();
+  $("#importModalCancel").hide();
+}
+
+function sendImportModal() {
+  var val,parsed;
+  val=$("#importModalValue").val();
+  if (!val) {
+    showImportModalResult(autolang.trans("Please select a proper file"));
+    return;
+  }
+  try {
+    parsed=JSON.parse(val);
+  } catch (e) {
+    showImportModalResult(autolang.trans("File does not contain correct json"));
+    return;
+  }  
+  autoapi.postImport(parsed);
+}
+
+function importFileChange(e) {
+  var input=e.target; 
+  if (!input.files || input.files.length<1) return;
+  var file = input.files[0];
+  var filecontent="";        
+  var reader = new FileReader();
+  reader.onload = function(out){
+    importFileChangeFinal(input,input.value,out.target.result);
+  }    
+  reader.readAsText(file);
+}
+  
+function importFileChangeFinal(input,value,result) {
+  $("#importModalValue").val(result);
+  $("#importModalImport").show();
+}  
 
 /* ------- parse uri ------- */
 
@@ -1110,6 +1382,9 @@ exports.makeSaveParams = makeSaveParams;
 exports.getStateParamsFilter = getStateParamsFilter;
 exports.formvalueToJson = formvalueToJson;
 exports.localDateTimeISO = localDateTimeISO;
+exports.formatDate = formatDate;
+exports.formatDateEnd = formatDateEnd;
+//exports.commonPrefix = commonPrefix;
 
 exports.processReadRecord = processReadRecord;
 exports.processReadRecordForInfosystem = processReadRecordForInfosystem;
@@ -1136,8 +1411,13 @@ exports.getLinkForUri = getLinkForUri;
 exports.getKind = getKind;
 exports.getAuthToken = getAuthToken;
 
+
 exports.modalGetValue = modalGetValue;
 exports.modalConfirm = modalConfirm;
+exports.modalWizard = modalWizard;
+exports.replaceWizardHtml = replaceWizardHtml;
+exports.wizardGetValue = wizardGetValue;
+exports.useWizardSelection = useWizardSelection;
 
 exports.storeHistory = storeHistory;
 exports.restoreHistory = restoreHistory;
