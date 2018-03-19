@@ -26,9 +26,9 @@ Second, get the server-side api tool running:
   * check the app.cfg contents: is everything ok? if not, modify.
   * run the flask app, like this:
 
-    $ export FLASK_APP=app.py
-    $ export FLASK_DEBUG=1  # optional
-    $ flask run
+    export FLASK_APP=app.py
+    export FLASK_DEBUG=1  # optional
+    flask run
 
 You should now have the api tool running as as a flask app at
 
