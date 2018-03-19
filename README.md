@@ -22,8 +22,9 @@ First, create the database:
 Second, get the server-side api tool running:
 
   * install python if you do not have it already. Demo uses python 2 series.
+  * install psycopg2: the standard library for connecting to postgresql from python.
   * install Flask if you do not have it already: sudo pip install Flask
-  * check the app.cfg contents: is everything ok? if not, modify.
+  * check the app.cfg contents: is everything ok (database connection, logfile location)? If not, modify. 
   * run the flask app, like this:
 
         export FLASK_APP=app.py
@@ -36,7 +37,7 @@ You should now have the api tool running as as a flask app at
 
 Try from the browser with cgi parameters:
 
-    http://127.0.0.1:5000/api?op=list&table=locations&token=test
+    http://127.0.0.1:5000/api?op=list&table=users&token=test
 
 and using curl and posted json:
 
@@ -49,16 +50,16 @@ Third, try out the html UI in your browser, served by flask:
 
     http://127.0.0.1:5000/static/index.html
 
-You should see a login page. Enter arbitrary username and password, click "Demo login"
+You should see a login page. Enter an arbitrary username and password and click "Demo login".
 
-You should now see a simple page with a small left menu. The menu items should function,
-editing, adding and deleting records as well.
+You should now see a simple page with small top and left menus. The menu items should function,
+searching, editing, adding and deleting records as well.
 
-In case your api does not run on the url indicated before, please change 
+In case your api does not run on the url indicated above, please change 
 these rows in the js/data.js file accordingly:
 
-  "apiUrl": "http://127.0.0.1:5000/api", // normally used by api for fetching/storing data with a proxy 
-  "localApiUrl": "http://127.0.0.1:5000/api",
+    "apiUrl": "http://127.0.0.1:5000/api", // normally used by api for fetching/storing data with a proxy 
+    "localApiUrl": "http://127.0.0.1:5000/api",
 
 
 
