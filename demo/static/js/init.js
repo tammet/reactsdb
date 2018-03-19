@@ -5,6 +5,11 @@
 */
 
 var isTest=true;
+var topMenuList=["data","locations"];
+
+var rootElement=null;
+var reactInstance=null;
+
 
 function doLogin(userdata) {
   console.log("doLogin");
@@ -86,6 +91,15 @@ function menuData() {
   mainMenuView('users');
 }
 
+
+function menuLocations() {
+  console.log("menuLocations");  
+  menuHideShow("locations");
+  var viewdef=autoutils.getViewdef("menulocations");  
+  var state={op:"list",action:"initialsearch",viewdef:viewdef, data:null, sortkey:"id", preaction:"reset"};
+  if (reactInstance) reactInstance.updateState(state);
+}
+
 function menuHideShow(selected) { 
   $("#top").show();
   setMenuBackgrounds(selected);
@@ -93,9 +107,8 @@ function menuHideShow(selected) {
 
 function setMenuBackgrounds(selected) {
   var i,el;
-  var menuList=["data"];
-  for (var i=0; i<menuList.length; i++) {   
-    el=menuList[i];
+  for (var i=0; i<topMenuList.length; i++) {   
+    el=topMenuList[i];
     if (el==selected) $("#menu"+selected).css("background-color","#666"); 
     else $("#menu"+el).css("background-color","#333");
   }  
@@ -127,8 +140,8 @@ function initReact(state) {
       break;
     }
   }    
-  var rootElement = React.createElement(automain.AutoResource, state);
-  ReactDOM.render(rootElement, document.getElementById('react-app'));
+  rootElement = React.createElement(automain.AutoResource, state);
+  reactInstance = ReactDOM.render(rootElement, document.getElementById('react-app'));
 }  
 
 

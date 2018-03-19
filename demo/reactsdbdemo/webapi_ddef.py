@@ -45,7 +45,7 @@ dtables={
     "refField" : "id",
     "nameField" : "name",
     "fields" : [  
-      {"name":"id", "type":"integer","edit":0, "addShow":0,"listShow":0,"filter":0}, 
+      {"name":"id", "type":"integer", "auto":1,"edit":0, "addShow":0,"listShow":0,"filter":0}, 
       {"name":"lat", "type":"float", "listShow":0, "filter":0, "help": " latitude"},
       {"name":"lng", "type":"float", "listShow":0, "filter":0, "help": " longitude "},
       {"name":"zoom", "type":"integer", "listShow":0, "filter":0, "help": " map zoom level at which shown"},
@@ -85,7 +85,7 @@ dtables={
     "refField" : "id",
     "nameField" : "userid",
     "fields" : [  
-      {"name":"id", "type":"integer","edit":0, "addShow":0,"listShow":0,"filter":0}, 
+      {"name":"id", "type":"integer", "auto":1, "edit":0, "addShow":0,"listShow":0,"filter":0}, 
       {"name":"locationid", "type":"integer", "listShow":0, "filter":0, "help": " location which is described"},
       {"name":"userid", "type":"integer", "listShow":0, "filter":0, "help": " user id who sent this info "},
       {"name":"score", "type":"integer", "listShow":0, "filter":0, "help": " score given by user"},
@@ -101,7 +101,7 @@ dtables={
     "refField" : "id",
     "nameField" : "userid",
     "fields" : [  
-      {"name":"id", "type":"integer","edit":0, "addShow":0,"listShow":0,"filter":0},
+      {"name":"id", "type":"integer", "auto":1, "edit":0, "addShow":0,"listShow":0,"filter":0},
       {"name":"sid", "type":"string", "listShow":0, "filter":0, "help": " client-generated session id"},
       {"name":"userid", "type":"integer", "listShow":0, "filter":0},
       {"name":"endts", "type":"datetime", "listShow":0, "filter":0},

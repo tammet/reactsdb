@@ -107,8 +107,11 @@ body {
     <div class="navbar-collapse collapse">
       <ul class="nav navbar-nav">       
         <li class="dummy navbar-button" id="menudata">
-          <a href="#" class="navbar-btn-link" onclick="menuData();">Data</a>
-        </li>                                                         
+          <a href="#" class="navbar-btn-link" onclick="menuData();">All data</a>
+        </li>   
+        <li class="dummy navbar-button" id="menulocations">
+          <a href="#" class="navbar-btn-link" onclick="menuLocations();">Locations</a>
+        </li>                                                       
       </ul>      
       <p class="navbar-text">&nbsp</p>
       
@@ -344,11 +347,21 @@ body {
 
 <script src="js/jquery.min.js"></script>
 <script src="js/bootstrap.min.js"></script>
-
 <script src="js/underscore-min.js"></script>
+
 <!-- <script src="js/react.min.js"></script> -->
 <script src="js/react.js"></script>
 <script src="js/react-dom.js"></script>
+
+<!--
+<script src="js/react.development.js"></script>
+<script src="js/react-dom.development.js"></script>
+<script src="js/create-react-class.min.js"></script>
+<script>
+var createReactClass = require('create-react-class');
+</script>
+-->
+
 <script src="js/bootstrap-datepicker.js"></script>
 
 <!-- autoreact viewdefs -->
