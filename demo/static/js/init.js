@@ -1,6 +1,6 @@
 /* 
  
- gtour initialization calls
+ reactsdb initialization calls
  
 */
 
@@ -8,14 +8,13 @@ var isTest=true;
 
 function doLogin(userdata) {
   console.log("doLogin");
-  console.log(userdata.fullname);
-
+  //console.log(userdata.fullname);
   $("#body").css("background-image","none");
   $("#body").css("background-color", "#f9f9fb");
   $("#userfullname").html(userdata.fullname);
   $("#login-page").hide();
   $("#body").css("overflow-y", "scroll");
-  menuHideShow("overview")
+  //menuHideShow("overview")
   $("#main-page").show();  
   globalState.token="test";
   initMain();  
@@ -31,17 +30,17 @@ function menuLogOut() {
 }
 
 function initMain() {  
-  // turn logging off if so indicated by globalState
   if (!globalState.debug) autoutils.debug = function(){};  
   autolang.initialTrans(); // translate static UI  
-  loadTemplates();
-  //initReact(globalState);   
+  loadTemplates();   
   setupHistory();
   finishInit() ;
-  //menuHideShow("users");
   mainMenuView('users');  
 };
 
+function loadTemplates() {
+  globalState.viewdefs=viewdefs;     
+}
 
 function setupHistory() {
   // handle back button
@@ -78,39 +77,33 @@ function finishInit() {
 }
 
 
-function getSessionId(queryStr) {
-  var queryArr = queryStr.split('&');
-  for (var i = 0; i < queryArr.length; i++) {
-    var items = queryArr[i].split('=');
-    if (items.length > 1 && items[0] === "sessionId") return items[1];
-  }
-  return null;
+// -- top bar menu handling ---
+
+
+function menuData() {
+  console.log("menuData"); 
+  menuHideShow("data");
+  mainMenuView('users');
 }
 
-function authenticate(token, callback) {
-  autoapi.getUserFromToken(globalState,token,function(data) {
-    receivedUser(data);
-    if (callback) callback();
-  });
+function menuHideShow(selected) { 
+  $("#top").show();
+  setMenuBackgrounds(selected);
+}  
+
+function setMenuBackgrounds(selected) {
+  var i,el;
+  var menuList=["data"];
+  for (var i=0; i<menuList.length; i++) {   
+    el=menuList[i];
+    if (el==selected) $("#menu"+selected).css("background-color","#666"); 
+    else $("#menu"+el).css("background-color","#333");
+  }  
 }
 
-function loadTemplates() {
-  globalState.viewdefs=viewdefs;     
-}
 
-// Create filter from query params:
-function createFilter(queryStr) {
-  var queryArr = queryStr.split('&');
-  var filter = [];
-  for (var i = 0; i < queryArr.length; i++) {
-    var items = queryArr[i].split('=');
-    if (items.length > 1 && items[0] !== "sessionId") 
-      filter.push([items[0], 'ilike', '%' + decodeURIComponent(items[1]) + '%']);
-  }
-  return filter;
-}
+// ----- select main menu item and run react ------
 
-// select main menu item 
 
 function mainMenuView(viewname) {    
   ReactDOM.unmountComponentAtNode(document.getElementById('react-app'));

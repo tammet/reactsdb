@@ -451,7 +451,7 @@ var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
 // getList first gets a count, then calls getPureList to get list data
 
 var getListSingle = function(ctxt,op,viewdef,stateparams) {
-  autoutils.debug("calling getCountedListSingle from getListSingle");
+  //autoutils.debug("calling getCountedListSingle from getListSingle");
   return getCountedListSingle(ctxt,op,viewdef,stateparams);
   /*
   var offset=stateparams["offset"];
@@ -665,7 +665,7 @@ var getInfosystemAuxData = function(ctxt,url,need,statepart,future) {
 
 var getRecord = function(ctxt,op,viewdef,id,future) {
   var auxDataNeed,statepart;
-  //autoutils.debug("calling getRecord with id "+id);
+  autoutils.debug("calling getRecord with id "+id);
   // Special handling for templates with "list_templates" element:
   if (_.has(viewdef, 'list_templates')) {
     // Get id parts:

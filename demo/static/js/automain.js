@@ -332,9 +332,9 @@ var AutoResource = React.createClass({
     // -- list actions --
 
       
-    autoutils.debug("about to handle list op");
-    autoutils.debug(statechange.op);
-    autoutils.debug(statechange.action);
+    //autoutils.debug("about to handle list op");
+    //autoutils.debug(statechange.op);
+    //autoutils.debug(statechange.action);
     //console.log(this.state.viewdef);
     //console.log(stateparams);
     if (statechange.op==="list" && statechange.action==="initialsearch") {      

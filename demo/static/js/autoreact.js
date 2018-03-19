@@ -611,7 +611,7 @@ var AutoRow = React.createClass({
       rowclass="datarowNoclick"; 
     }
     //rowclass+=" redtext"
-    console.log(this.props.viewdef.name);    
+    //console.log(this.props.viewdef.name);    
     for (var i=0, field=""; i<fields.length; i++) {
       field=fields[i];
       isbutton=false;
