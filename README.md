@@ -51,8 +51,8 @@ Third, try out the html UI in your browser, served by flask:
 
 You should see a login page. Enter arbitrary username and password, click "Demo login"
 
-You should now see a simple page with a small left menu. The "Users" selection should function.
-Editing users should be possible, adding currently not.
+You should now see a simple page with a small left menu. The menu items should function,
+editing, adding and deleting records as well.
 
 In case your api does not run on the url indicated before, please change 
 these rows in the js/data.js file accordingly:
