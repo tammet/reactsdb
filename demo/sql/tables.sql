@@ -42,6 +42,7 @@ create table users ( -- all users are here: both admins and mobile users
   about varchar(1000), -- user may tell us something about herself
   tagprefs jsonb, -- list of tags the user prefers like ["view","eat","fun"] etc  
   uistyle varchar(50),
+  locationid integer,
   -- stuff user cannot enter/change directly:
   checkins jsonb, -- yet unknown structure for caching user checkins, likes etc for locations, 
   remarks varchar(1000), 

@@ -121,7 +121,7 @@ def flask_parse_std_parameters(req,inmethod,inparams):
             "id":None,"start":0,"count":100,"data":None,"key":"id","token":None,"callback": None,
             "name":None,"tags":None,"description":None,"username":None,"password":None,
             "user_id":None,"userid":None, "country": None, "city": None,
-            "lat0":None,"lat1":None,"lng0":None,"lng1":None,
+            "lat0":None,"lat1":None,"lng0":None,"lng1":None,"sortkey":None,"join":None,
             "to":None,"password":None}
   res={}  
   req.inmethod=inmethod
@@ -146,7 +146,7 @@ def cgi_parse_std_parameters(req):
             "id":None,"start":0,"count":100,"data":None,"key":"id","token":None,"callback": None,
             "name":None,"tags":None,"description":None,"username":None,"password":None,
             "user_id":None,"userid":None, "country": None, "city": None,
-            "lat0":None,"lat1":None,"lng0":None,"lng1":None,
+            "lat0":None,"lat1":None,"lng0":None,"lng1":None,"sortkey":None,"join":None,
             "to":None,"password":None}
   res={}  
   req.inmethod=os.environ['REQUEST_METHOD']

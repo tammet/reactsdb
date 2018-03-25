@@ -1358,16 +1358,16 @@ var AutoEditFld = React.createClass({
     } else if (isSearchType(fldtype)) {
       raw=ce(AutoEditFldSearch,{
              //handleChange:this.handleChange,
-             value:this.props.value,
+             value: autoutils.origRawValue(this.props.name,this.props.datarow), //this.props.value
              viewdef:this.props.viewdef,
              name:this.props.name,
              parentName:this.props.parentName,
              arrayIndex:this.props.arrayIndex,
              complexCallback: this.props.complexCallback,  
-             //searchValue:this.state.searchValue,
+             searchValue: this.props.value,//this.state.searchValue,
              datarow: this.props.datarow,
              autoid: autoid, 
-             parent:this.props.parent,
+             parent: this.props.parent,
              auxdata: this.props.auxdata}
       );             
     } else { 
@@ -1447,7 +1447,14 @@ var AutoEditFldSearch= React.createClass({
     var kind=getDynamicSearchKind(fldtype);
     var idfldname=getDynamicSearchIdFieldName(fldtype);
     var namefldname=getDynamicSearchNameFieldName(fldtype);
-    var searchValue = autoutils.replaceWithAux(this.props.value, this.props.auxdata, fldtype);
+    var searchValue;
+    if (this.props.searchValue) 
+      searchValue=this.props.searchValue;
+    else if (this.props.datarow[name+"__joinReplaced"])
+      searchValue=this.props.datarow[name+"__joinReplaced"];
+    else
+      searchValue=autoutils.replaceWithAux(this.props.value, this.props.auxdata, fldtype);
+    //searchValue="names:"+name+","+idfldname+","+namefldname;
     if (this.props.value && this.props.value===searchValue) searchValue="";
     return {value:this.props.value, searchValue: searchValue, dynoptions:null,
             fld:fld, fldtype:fldtype, selindex:null,
@@ -1456,13 +1463,14 @@ var AutoEditFldSearch= React.createClass({
   // called when id field content is changed by user
   handleChange: function(e) {   
     var input=e.target; 
-    removeAlert();
+    removeAlert();   
     this.setState({value:input.value, searchValue: "", dynoptions:null, selindex:null});
     if (this.props.complexCallback) this.props.complexCallback(input.value); 
   },
   // called when search field content is changed by user
   handleDynamicSearchFieldChange: function(e) { 
     var input=e.target;
+    //console.log(" handleDynamicSearchFieldChange changed to: "+input.value)
     if (isSearchType(this.state.fldtype)) {
       if (!input.value) {
         if (this.props.show=="searchfield")
@@ -1481,6 +1489,8 @@ var AutoEditFldSearch= React.createClass({
                                   this.state.namefldname, filter);
       }        
     }        
+    //console.log("cp2: "+input.value+","+this.state.value);
+    if (input.value=="") this.setState({value:""});
     this.setState({searchValue:input.value});  
   },  
   /*
@@ -1527,7 +1537,7 @@ var AutoEditFldSearch= React.createClass({
              value:val2};    
     if (!val2) params2["placeholder"]=trans("name");
     raw=ce("div",{key:makeKey(name+"_dynfieldswrap"+this.props.parentName+this.props.arrayIndex)},
-          ce("div",{className:"nowrap",key:makeKey(name+"_dynfieldsinwrap"+this.props.parentName+this.props.arrayIndex)},
+          ce("div",{className:"nowrap searchfieldiddiv",key:makeKey(name+"_dynfieldsinwrap"+this.props.parentName+this.props.arrayIndex)},
             ce("input",params1),
             ((this.props.show=="searchfield") ? "" : ce("span",{className: "dynamicSearchLabel"},trans("code")))
           ),    

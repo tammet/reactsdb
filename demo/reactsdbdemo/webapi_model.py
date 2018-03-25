@@ -226,9 +226,13 @@ def get_list_data(req,table):
           fldset+=table+"."+name
       else:
         fldset+=table+"."+name
-  qs="select "+fldset
-  qs+=" from "+table 
-  flt=parse_filter(req,req.filter,table)
+  qs="select "+fldset  
+  #select users.id,users.username,locations.name from users left join locations on users.locationid=locations.id where users.id>0;
+  joins=parse_joins(req,req.join,table)
+  if joins: qs+=joins[2]
+  qs+=" from "+table
+  if joins: qs+=joins[0]
+  flt=parse_filter(req,req.filter,table)  
   params=None
   #qs+=" where "+table+".groupid in "+groupclause(req)
   #if flt: qs+=" and "+str(flt)
@@ -245,6 +249,7 @@ def get_list_data(req,table):
   if req.sort:
     qs+=" order by "+dbs(tmp)+" "+order+" nulls last"
   qs+=" limit "+dbs(str(start+count))
+  #handle_error(req,9,qs) 
   data=db_get_rows_with_colnames(req,qs,params,start,count)
   return data
 
@@ -503,12 +508,129 @@ def parse_filter(req,filter,table,extraflds=None):
     if not val: 
       val=lst[i*3+2].strip()
       val=process_sql_val_str(val)          
-    res+=[str(fld),str(op),str(val)]
+    res+=[str(table+"."+fld),str(op),str(val)]
     i+=1
   #handle_error(req,9,str(res))  
   sres=" ".join(res)
   return sres
   
+
+# ----------------- parsing joins -----------------------------
+# origfield,tablename1.table1joinfield,tablename1.tablej1newfield,
+#select users.id,users.username,locations.name from users left join locations on users.locationid=locations.id where users.id>1;
+
+
+def parse_joins(req,joins,table):
+  if joins:
+    lst=joins.split(",")
+  else:
+    return None  
+  if len(lst)<3:
+    handle_error(req,9,'joins must contain at least 3 elements')    
+  if len(lst) % 3 != 0:
+    handle_error(req,9,'joins length must divide by 3')    
+  fldres=""  
+  tres=""
+  fres=""  
+  i=0
+  #handle_error(req,9,str(req.dtables))   
+  #handle_error(req,9,str(req.dtables["locations"])) 
+  while i*3<len(lst):   
+    mainfld=lst[i*3].strip()     
+    joinfld=lst[i*3+1].strip()    
+    newfld=lst[i*3+2].strip()
+    tmp=joinfld.split(".")
+    if len(tmp)!=2:
+      handle_error(req,9,'joined field in join without table, use table.field')
+    tbl=tmp[0]  
+    joinfld=tmp[1]
+    tmp=newfld.split(".")
+    if len(tmp)==1:
+      newfld=tmp[0]
+    else:
+      newfld=tmp[1]     
+    if not req.dtables[tbl]:
+      handle_error(req,9,'unknown table in join, check ddef')
+    if not is_known_field(req,mainfld):
+      handle_error(req,9,'unknown main table field in join, check ddef')     
+    flds=req.dtables[tbl]['fields']
+    foundjoin=None
+    for el in flds:    
+      if el.has_key('name') and el["name"]==joinfld:
+        foundjoin=el["name"] 
+        break
+    if not foundjoin:
+      handle_error(req,9,'unknown joined table field in join, check ddef')   
+    found=None
+    for el in flds:    
+      if el.has_key('name') and el["name"]==newfld:
+        foundnew=el["name"] 
+        break
+    if not foundnew:
+      handle_error(req,9,'unknown joined table new field in join, check ddef')     
+    tres+=" left join "+tbl+" on "+table+"."+mainfld+"="+tbl+"."+joinfld     
+    fldres+=", "+tbl+"."+newfld+" as "+tbl+"__"+newfld
+    i+=1  
+  #handle_error(req,9,str( [tres,fres,fldres] )) 
+  return [tres,fres,fldres]
+
+def old_parse_joins(req,joins,table):
+  if joins:
+    lst=joins.split(",")
+  else:
+    return None  
+  if len(lst)<3:
+    handle_error(req,9,'joins must contain at least 3 elements')    
+  if len(lst) % 3 != 0:
+    handle_error(req,9,'joins length must divide by 3')    
+  fldres=""  
+  tres=""
+  fres=""  
+  i=0
+  #handle_error(req,9,str(req.dtables))   
+  #handle_error(req,9,str(req.dtables["locations"])) 
+  while i*3<len(lst):   
+    mainfld=lst[i*3].strip()     
+    joinfld=lst[i*3+1].strip()    
+    newfld=lst[i*3+2].strip()
+    tmp=joinfld.split(".")
+    if len(tmp)!=2:
+      handle_error(req,9,'joined field in join without table, use table.field')
+    tbl=tmp[0]  
+    joinfld=tmp[1]
+    tmp=newfld.split(".")
+    if len(tmp)==1:
+      newfld=tmp[0]
+    else:
+      newfld=tmp[1]     
+    if not req.dtables[tbl]:
+      handle_error(req,9,'unknown table in join, check ddef')
+    if not is_known_field(req,mainfld):
+      handle_error(req,9,'unknown main table field in join, check ddef')     
+    flds=req.dtables[tbl]['fields']
+    foundjoin=None
+    for el in flds:    
+      if el.has_key('name') and el["name"]==joinfld:
+        foundjoin=el["name"] 
+        break
+    if not foundjoin:
+      handle_error(req,9,'unknown joined table field in join, check ddef')   
+    found=None
+    for el in flds:    
+      if el.has_key('name') and el["name"]==newfld:
+        foundnew=el["name"] 
+        break
+    if not foundnew:
+      handle_error(req,9,'unknown joined table new field in join, check ddef')     
+    tres+=", "+tbl
+    if fres: fres+=" and "
+    fres+=table+"."+mainfld+"="+tbl+"."+joinfld      
+    fldres+=", "+tbl+"."+newfld
+    i+=1  
+  #handle_error(req,9,str( [tres,fres,fldres] )) 
+  return [tres,fres,fldres]
+
+
 # ---------------- small db utilities --------------------------
 
 

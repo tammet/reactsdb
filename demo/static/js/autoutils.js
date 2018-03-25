@@ -796,6 +796,10 @@ function processReadRecordForInfosystem(data,auxdata) {
 
 function auxDataNeed(data,viewdef,currentAuxData) {
   var fields,part,i,j,keys,key,val,fld,type,subtype,subviewdef;
+  autoutils.debug("calling auxDataNeed");
+  console.log(data);
+  console.log(viewdef);
+  console.log(currentAuxData);
   if (!data) return null;
   fields=viewdef.fields;
   if (_.isArray(data)) {
@@ -803,6 +807,8 @@ function auxDataNeed(data,viewdef,currentAuxData) {
     for(i=0;i<data.length;i++) {      
       part=auxDataNeed(data[i],viewdef,part); 
     }
+    console.log("auxDataNeed res for isArray");
+    console.log(part);
     return part;
   }  
   else if (_.isObject(data)) {
@@ -815,7 +821,13 @@ function auxDataNeed(data,viewdef,currentAuxData) {
       fld=_.findWhere(fields, {name:key});
       if (!fld) continue;
       type=fld.type;
-      subtype=arraySubtype(type);      
+      subtype=arraySubtype(type);
+      console.log("fld, key, type, subtype, val");
+      console.log(fld);
+      console.log(key);
+      console.log(type);
+      console.log(subtype);
+      console.log(val);      
       if (subtype && _.isArray(val)) {
         if (isRefType(subtype)) {        
           for(j=0;j<val.length;j++) {      
@@ -831,13 +843,27 @@ function auxDataNeed(data,viewdef,currentAuxData) {
         part=auxDataNeedSingle(val,type,part)
       }
     }
+    console.log("auxDataNeed res for isObject");
+    console.log(part);
     return part;
   }
   return {};  
 }
 
 function auxDataNeedSingle(val,type,part) {
+  /*
+  console.log("auxDataNeedSingle");
+  console.log(val);
+  console.log(type);
+  console.log(part);
+  */
   if (val === undefined || val === null || val === "" || val === 0) return part;
+  if (isRefType(type)) {
+    var tname=refSubtype(type);
+    if (!part[tname]) part[tname]=[val];
+    else if (part[tname].indexOf(val)<0) part[tname].push(val);
+  }
+  /*
   if (type=="ref:person") {
     if (!part.persons) part.persons=[val];
     else if (part.persons.indexOf(val)<0) part.persons.push(val);
@@ -854,6 +880,8 @@ function auxDataNeedSingle(val,type,part) {
     if (!part.uris) part.uris = [val];
     else if (part.uris.indexOf(val) < 0) part.uris.push(val);
   }
+  */
+  //console.log(part);
   return part;  
 }
 
@@ -927,6 +955,77 @@ function replaceWithAuxObject(obj,auxdata,viewdef,replacestyle) {
     res[key]=conv;
   }
   return res;  
+}
+
+// ------------- creating and using joins ------------------------------
+
+
+function makeListJoinParams(ctxt,op,viewdef,stateparams) { 
+  //console.log("makeListJoinParams "+viewdef.name);
+  var i,key,fld,fldname,tbl,tblidfld,tblnamefld,joinstr="";
+  var flds=viewdef.fields;  
+  //console.log("flds: "+flds);
+  //var keys=_.keys(flds); 
+  //console.log("keys: "+keys);
+  for(i=0;i<flds.length;i++) {    
+    fld=flds[i];    
+    fldname=fld.name;
+    //console.log("fldname: "+fldname);
+    if (!isRefType(fld.type)) continue;
+    var tname=refSubtype(fld.type);
+    //console.log("tname: "+tname);
+    tbl=getViewdef(tname);
+    if (!tbl) continue;
+    //console.log("namefield,refffield "+" "+tbl["nameField"]+" "+tbl["refField"]);
+    if (!(tbl && tbl["nameField"] && tbl["refField"])) continue;      
+    joinstr+=fldname+","+tbl.name+"."+tbl["refField"]+","+tbl.name+"."+tbl["nameField"];          
+  }
+  //console.log("returning "+joinstr);
+  return joinstr;      
+}
+
+function replaceWithJoin(viewdef,joinparams,data,op) {
+  //console.log("replaceWithJoin op "+op);
+  var i,j,rec,join,jobj={},jpart,jfld,jnewfld,keys,key,tmp;
+  if (!data || !joinparams) return data;
+  join=joinparams.split(",");
+  for(j=0;j*3<join.length;j++) {
+    tmp=join[j*3+2].split(".");
+    //console.log(j+" "+tmp)
+    jobj[join[j*3]]=tmp[0]+"__"+tmp[1];
+  }
+  //console.log(jobj);
+  if (_.isArray(data) && !_.isEmpty(data)) {
+    for(i=0;i<data.length;i++) {
+      rec=data[i];
+      keys=_.keys(rec);
+      for(j=0;j<keys.length;j++) {
+        key=keys[j];
+        if (jobj[key]) {
+          data[i][key]=rec[jobj[key]];
+        }
+      }
+    }
+  } else if (op==="edit")  {
+  
+  } else {
+    rec=data;
+    keys=_.keys(rec);
+    for(j=0;j<keys.length;j++) {
+      key=keys[j];
+      if (jobj[key]) {
+        data[key+"__joinReplaced"]=rec[jobj[key]];
+        data[key+"__origRaw"]=data[key];        
+        data[key]=rec[jobj[key]];        
+      }
+    }
+  }  
+  return data;
+}
+
+function origRawValue(name,rec) {
+  var oname=name+"__origRaw";
+  return rec[oname];
 }
 
 // ------------- handling fields ---------------------------
@@ -1393,12 +1492,17 @@ exports.auxDataNeed = auxDataNeed;
 exports.replaceWithAux = replaceWithAux;
 exports.addToAux = addToAux;
 
+exports.makeListJoinParams=makeListJoinParams;
+exports.replaceWithJoin = replaceWithJoin;
+exports.origRawValue = origRawValue;
+
 exports.hasNegativeProperty = hasNegativeProperty;
 exports.orderFields = orderFields;
 exports.fieldShow = fieldShow;
 
 exports.versionableViewdef = versionableViewdef;
 exports.isRefType = isRefType;
+exports.isIdType = isIdType;
 exports.isArrayType = isArrayType;
 exports.arraySubtype = arraySubtype;
 exports.refSubtype = refSubtype;

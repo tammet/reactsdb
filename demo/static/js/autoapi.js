@@ -14,6 +14,7 @@ function convertParams(params) {
   var i,j,key,keys,tmp,lst,flt,res={};
   if (!params || _.isEmpty(params)) return params;
   keys=_.keys(params);
+  //console.log("convertParams ")
   //console.log(params);    
   for(i=0;i<keys.length;i++) {
     key=keys[i];
@@ -28,7 +29,8 @@ function convertParams(params) {
     }  
     else if (key=="path") {
       lst=params["path"].split("/");
-      if (lst.length<=1) res["table"]=params["path"];        
+      //console.log(lst);
+      if (lst.length<=1) res["table"]=params["path"];       
       else if (!lst[lst.length-1]) {
         res["table"]=lst[lst.length-2];
       } else if (lst.length>1) {        
@@ -39,6 +41,8 @@ function convertParams(params) {
             res["data"]=[tmp];
           else
             res["filter"]="id,=,"+tmp;
+        } else {
+          res["table"]=lst[lst.length-1];
         }
       }
     }  
@@ -70,6 +74,7 @@ function convertParams(params) {
     }  
     else res[key]=params[key];
   }  
+  console.log(res);
   return res;
 }
   
@@ -357,6 +362,8 @@ function makeListFilterParams(ctxt,op,viewdef,stateparams) {
   return params;
 }  
 
+
+
 function makeListNextState(oldstate,changes) {
   var key,nextstate={}
   //var changes={data: data, op:"list", action: null, alert:false}
@@ -385,6 +392,8 @@ var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
   var count=0;
   var params=makeListFilterParams(ctxt,op,viewdef,stateparams);  
   if (!params) return;
+  var joinstr=autoutils.makeListJoinParams(ctxt,op,viewdef,stateparams);
+  if (joinstr) params["join"]=joinstr;
   params["offset"]=offset;
   params["limit"]=limit;
   params["op"]="countedlist";
@@ -428,7 +437,8 @@ var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
               if (data[i]["duration"]=="00:00:00") data[i]["duration"]="";
             }
           } 
-          auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});          
+          data=autoutils.replaceWithJoin(viewdef,joinstr,data);
+          auxDataNeed=[]; //autoutils.auxDataNeed(data,viewdef,{});          
           nextstate=makeListNextState(stateparams,
              {data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit});                   
           if (!_.isEmpty(auxDataNeed)) {
@@ -518,8 +528,10 @@ var getPureList = function(ctxt,op,viewdef,stateparams) {
   var sortkey=stateparams["sortkey"];
   var down=stateparams["down"];  
   var count=stateparams["count"];
-  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);  
-  if (!params) return;
+  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);   
+  if (!params) return;  
+  var join=autoutils.makeListJoinParams(ctxt,op,viewdef,stateparams);
+  if (join) params["join"]=join
   params["offset"]=offset;
   params["limit"]=limit;
   if (sortkey) {
@@ -586,11 +598,42 @@ var getPureList = function(ctxt,op,viewdef,stateparams) {
 
 var getAuxData = function(ctxt,url,need,statepart,future) {
   autoutils.debug("calling getAuxData");
+  console.log(url);
+  console.log(need);
+  console.log(statepart);
+  var args;
+  args={"op":"list",
+        "table":_.keys(need)[0],
+        "fields":"name",
+        "filter":"id,=,"+need[_.keys(need)[0]],
+        "token":autoutils.getAuthToken()};
+  console.log(args);
+ 
   //if (ctxt.props.dummyData) url=url+ctxt.props.auxDummyData;  
+
+  /* was
   var args=need;
   args["op"]="getnames";
   args["token"]=autoutils.getAuthToken();
   params=convertParams(params);
+  */
+
+  /* from riha 
+  var args=need;
+  args["op"]="getnames";
+  args["token"]=autoutils.getAuthToken();
+  */
+  /*
+  args={"op":"list","table":
+  args["op"]="get";
+  args["path"]="db/main_resource/";
+  args["token"]=autoutils.getAuthToken();
+  args["offset"]=0;
+  args["limit"]=1;
+  args["fields"]=["uri","name","main_resource_id"];
+  args["filter"]=[["kind","=","infosystem"]];
+  args["filter"].push(need);
+  */
   $.ajax({    
     url: url,
     dataType: 'json',
@@ -678,6 +721,8 @@ var getRecord = function(ctxt,op,viewdef,id,future) {
   var url=getApiUrl(ctxt,viewdef);
   if (ctxt.props.dummyData) url=url+ctxt.props.recordDummyData;  
   var args={"op":"get","path": autoutils.getPath(viewdef)+id, "token":autoutils.getAuthToken()};
+  var joinstr=autoutils.makeListJoinParams(ctxt,op,viewdef,null);
+  if (joinstr) args["join"]=joinstr;
   args=convertParams(args);
   $.ajax({    
     url: url,
@@ -728,7 +773,8 @@ var getRecord = function(ctxt,op,viewdef,id,future) {
         }                        
       } else {  
         if (_.isArray(data) && !_.isEmpty(data)) data=data[0];        
-        auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});  
+        data=autoutils.replaceWithJoin(viewdef,joinstr,data,op);
+        auxDataNeed=[]; //autoutils.auxDataNeed(data,viewdef,{});  
         statepart={data: data, op:"view", viewdef:viewdef, action:null, alert:false};
         if (future && future.alert) {
           statepart.alert=future.alert;

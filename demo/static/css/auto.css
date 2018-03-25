@@ -26,7 +26,7 @@
 
 .outerDynamicSearchBlock {
   display: block;
-  vertical-align: bottom;
+  /* vertical-align: bottom; */
   background-color: #eee;
   padding-right: 5px;
   align-items:left;
@@ -69,6 +69,9 @@
   color: #999;	
 }
 
+.searchfieldiddiv {
+  display: none;
+}
 /*
 .showntip {
   display: block;
@@ -534,7 +537,7 @@ textarea.fldinput_textarea_400 {
 .showntip {
   display: block;
   position: absolute;
-  vertical-align: middle;
+  /* vertical-align: middle; */
   z-index: 10;
   margin-left: 30px;
   margin-right: 20px;
@@ -922,7 +925,7 @@ td.fldvalue_complex {
   padding-left: 5px;
   padding-right: 5px;
   padding-top: 1px;
-  padding-bottom: 1px
+  padding-bottom: 1px;
   
   -webkit-box-shadow: 1px 2px 6px -3px rgba(0,0,0,0.75);
   -moz-box-shadow: 1px 2px 6px -3px rgba(0,0,0,0.75);
@@ -937,7 +940,7 @@ td.fldvalue_complex {
   padding-left: 5px;
   padding-right: 5px;
   padding-top: 1px;
-  padding-bottom: 2px
+  padding-bottom: 2px;
   
   -webkit-box-shadow: 1px 2px 6px -3px rgba(0,0,0,0.75);
   -moz-box-shadow: 1px 2px 6px -3px rgba(0,0,0,0.75);
