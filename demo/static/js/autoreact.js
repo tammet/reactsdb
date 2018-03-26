@@ -847,7 +847,7 @@ var AutoViewButtons = React.createClass({
                           trans("Hide empty fields"))
               :
               ce("button", {className: secondaryBtnClass, onClick:this.handleViewAllFields, type: "button"},
-                          trans("View also empty fields")) )),
+                          trans("Show empty fields")) )),
           ((autoutils.versionableViewdef(this.props.viewdef) && canedit) ?
             ce("button", {className: secondaryBtnClass, onClick:this.handleNewVersion, type: "button"}, trans("Create a new version"))
             :
@@ -1450,7 +1450,7 @@ var AutoEditFldSearch= React.createClass({
     var searchValue;
     if (this.props.searchValue) 
       searchValue=this.props.searchValue;
-    else if (this.props.datarow[name+"__joinReplaced"])
+    else if (this.props.datarow && this.props.datarow[name+"__joinReplaced"])
       searchValue=this.props.datarow[name+"__joinReplaced"];
     else
       searchValue=autoutils.replaceWithAux(this.props.value, this.props.auxdata, fldtype);
@@ -1541,7 +1541,7 @@ var AutoEditFldSearch= React.createClass({
             ce("input",params1),
             ((this.props.show=="searchfield") ? "" : ce("span",{className: "dynamicSearchLabel"},trans("code")))
           ),    
-          ce("div",{className:"nowrap"},
+          ce("div",{className:"nowrap searchfieldnamediv"},
             ce("input",params2),
             ce("span",{className: "dynamicSearchLabel"},trans("search"))
           )            

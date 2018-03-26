@@ -22,7 +22,7 @@ var viewdefs = [
       {"name":"phone", "type":"string", "listShow":0, "filter":0, "group":"other"},
       {"name":"email", "type":"string", "listShow":0, "filter":0, "group":"other"},
       {"name":"address", "type":"string", "listShow":0, "filter":0, "editWidget":"textarea", "group":"fancy"},
-      {"name":"locationid", "type":"ref:locations", "listShow":1, "filter":0, "group":"fancy"},        
+      {"name":"locationid", "type":"ref:locations", "listShow":1, "filter":1, "group":"fancy"},        
       {"name":"country", "type":"string", "listShow":0, "filter":0, "group":"other"},
         // "type":"array:string"}, 
       {"name":"lang", "label": "Language", "type":"string", "listShow":0, "filter":0,

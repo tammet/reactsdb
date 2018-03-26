@@ -57,7 +57,7 @@ dtables={
       {"name":"extvisits", "type":"integer", "listShow":0, "filter":0, "help": " initial known external visits"},
       {"name":"visits", "type":"integer", "listShow":0, "filter":0, "help": " visits known from our system"},
       {"name":"country", "type":"string", "listShow":0, "filter":0, "help": " country name if known"},
-      {"name":"locationid", "type":"ref:locations", "listShow":0, "filter":0, "group":"fancy"},
+      #{"name":"locationid", "type":"ref:locations", "listShow":0, "filter":0, "group":"fancy"},
       {"name":"city", "type":"string", "listShow":0, "filter":0, "help": " city/village/area name if known"},
       {"name":"radius", "type":"string", "listShow":0, "filter":0, "help": " radius of the object, if known"},
       {"name":"vradius","type":"float", "listShow":0, "filter":0, "help": " visible radius of the object,if known"},
