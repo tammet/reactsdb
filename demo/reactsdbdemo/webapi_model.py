@@ -205,6 +205,7 @@ def get_list_data(req,table):
   if req.dtables[table].has_key('table'):
     table=req.dtables[table]['table']
   fldset=""
+  #fldlst=[]
   for el in flds:    
     if el.has_key("dummy") and el["dummy"]: continue
     if el.has_key('name'): 
@@ -224,6 +225,7 @@ def get_list_data(req,table):
           fldset+=name  
         else: 
           fldset+=table+"."+name
+        #fldlst.append(table+"."+name)
       else:
         fldset+=table+"."+name
   qs="select "+fldset  
@@ -244,7 +246,7 @@ def get_list_data(req,table):
       tmp=tmp[1:]
     else:
       order="asc"      
-    if not is_known_field(req,tmp):
+    if not (is_known_field(req,tmp) or tmp in rfields):
       handle_error(req,9,'unknown field in sort, check ddef')       
   if req.sort:
     qs+=" order by "+dbs(tmp)+" "+order+" nulls last"
