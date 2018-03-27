@@ -535,6 +535,9 @@ def parse_joins(req,joins,table):
   i=0
   #handle_error(req,9,str(req.dtables))   
   #handle_error(req,9,str(req.dtables["locations"])) 
+  jointables=[]
+  joinflds=[]
+  foundnew=False
   while i*3<len(lst):   
     mainfld=lst[i*3].strip()     
     joinfld=lst[i*3+1].strip()    
@@ -568,8 +571,12 @@ def parse_joins(req,joins,table):
         break
     if not foundnew:
       handle_error(req,9,'unknown joined table new field in join, check ddef')     
-    tres+=" left join "+tbl+" on "+table+"."+mainfld+"="+tbl+"."+joinfld     
-    fldres+=", "+tbl+"."+newfld+" as "+tbl+"__"+newfld
+    if not tbl in jointables:
+      tres+=" left join "+tbl+" on "+table+"."+mainfld+"="+tbl+"."+joinfld     
+      jointables.append(tbl)
+    if not tbl+"."+newfld in joinflds:  
+      fldres+=", "+tbl+"."+newfld+" as "+tbl+"__"+newfld
+      joinflds.append(tbl+"."+newfld)
     i+=1  
   #handle_error(req,9,str( [tres,fres,fldres] )) 
   return [tres,fres,fldres]

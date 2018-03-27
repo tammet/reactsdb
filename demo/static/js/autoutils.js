@@ -356,7 +356,7 @@ function getFilterData(ctxt,op,viewdef) {
 function makeSaveParams(ctxt,viewdef,parent) { 
   var i=0,input,name,type,value,content,encoding,j,options,opt,tmp;
   var token,key,keyValue,mustfill,filledok;
-  //debug("makeSaveParams");
+  debug("makeSaveParams");
   //debug("parent:");
   //debug(parent);
   var args={},save=[];
@@ -378,6 +378,8 @@ function makeSaveParams(ctxt,viewdef,parent) {
   for(i=0;i<valueInputs.length;i++) {
     input=valueInputs[i];
     name=input["name"];
+    console.log(name);
+    if (name.indexOf(".")>0) continue; 
     type=input.getAttribute("data-type");
     encoding=input.getAttribute("data-encoding");    
     value=formvalueToJson(input["value"],type,encoding);
@@ -421,7 +423,8 @@ function makeSaveParams(ctxt,viewdef,parent) {
   }
   keys=_.keys(complexes);
   for(i=0;i<keys.length;i++) {
-    save[keys[i]]=complexes[keys[i]];
+    key=keys[i];
+    save[key]=complexes[key];
   }
   /*
   if (ctxt.state.rowid) args["key"]=ctxt.state.rowid;
@@ -971,37 +974,59 @@ function makeListJoinParams(ctxt,op,viewdef,stateparams) {
     fld=flds[i];    
     fldname=fld.name;
     //console.log("fldname: "+fldname);
-    if (!isRefType(fld.type)) continue;
-    var tname=refSubtype(fld.type);
-    //console.log("tname: "+tname);
-    tbl=getViewdef(tname);
-    if (!tbl) continue;
-    //console.log("namefield,refffield "+" "+tbl["nameField"]+" "+tbl["refField"]);
-    if (!(tbl && tbl["nameField"] && tbl["refField"])) continue;      
-    joinstr+=fldname+","+tbl.name+"."+tbl["refField"]+","+tbl.name+"."+tbl["nameField"];          
+    if (isRefType(fld.type)) {
+      var tname=refSubtype(fld.type);
+      //console.log("tname: "+tname);
+      tbl=getViewdef(tname);
+      if (!tbl) continue;
+      //console.log("namefield,refffield "+" "+tbl["nameField"]+" "+tbl["refField"]);
+      if (!(tbl && tbl["nameField"] && tbl["refField"])) continue; 
+      if (joinstr) joinstr+=","
+      joinstr+=fldname+","+tbl.name+"."+tbl["refField"]+","+tbl.name+"."+tbl["nameField"];
+    } else if (isOfType(fld.type)) {
+      var ofname=ofSubtype(fld.type);
+      tbl=tableNamePart(fldname);
+      tbl=getViewdef(tbl);
+      if (!tbl) continue;
+      if (!(tbl && tbl["refField"])) continue;      
+      if (joinstr) joinstr+=",";
+      joinstr+=ofname+","+tbl.name+"."+tbl["refField"]+","+fldname;
+    }          
   }
   //console.log("returning "+joinstr);
+  //locationid,locations.id,locations.name
   return joinstr;      
 }
 
 function replaceWithJoin(viewdef,joinparams,data,op) {
-  //console.log("replaceWithJoin op "+op);
-  var i,j,rec,join,jobj={},jpart,jfld,jnewfld,keys,key,tmp;
-  if (!data || !joinparams) return data;
+  console.log("replaceWithJoin op "+op);
+  var i,j,rec,join,jobj={},jpart,jfld,jnewfld,keys,key,tmp,modkey,flds;
+  if (!data || !joinparams || !viewdef) return data;
+  flds=viewdef.fields;
   join=joinparams.split(",");
   for(j=0;j*3<join.length;j++) {
     tmp=join[j*3+2].split(".");
     //console.log(j+" "+tmp)
+    if (!viewHasReftyped(viewdef,join[j*3])) continue;
+    //modkey=tmp[0]+"__"+tmp[1];
     jobj[join[j*3]]=tmp[0]+"__"+tmp[1];
+    /*
+    if (_.has(data,modkey)) {
+    } else {
+      jobj[join[j*3]]=tmp[0]+"__"+tmp[1];
+    } 
+    */ 
   }
-  //console.log(jobj);
+  console.log(jobj);
   if (_.isArray(data) && !_.isEmpty(data)) {
     for(i=0;i<data.length;i++) {
       rec=data[i];
       keys=_.keys(rec);
       for(j=0;j<keys.length;j++) {
         key=keys[j];
-        if (jobj[key]) {
+        if (key.indexOf("__")>0) {
+          data[i][key.replace("__",".")]=rec[key];
+        } else if (jobj[key]) {
           data[i][key]=rec[jobj[key]];
         }
       }
@@ -1009,11 +1034,14 @@ function replaceWithJoin(viewdef,joinparams,data,op) {
   } else if (op==="edit")  {
   
   } else {
+    // locationid,locations.id,locations.name
     rec=data;
     keys=_.keys(rec);
     for(j=0;j<keys.length;j++) {
       key=keys[j];
-      if (jobj[key]) {
+      if (key.indexOf("__")>0) {
+        data[key.replace("__",".")]=data[key];
+      } else if (jobj[key]) {
         data[key+"__joinReplaced"]=rec[jobj[key]];
         data[key+"__origRaw"]=data[key];        
         data[key]=rec[jobj[key]];        
@@ -1021,6 +1049,18 @@ function replaceWithJoin(viewdef,joinparams,data,op) {
     }
   }  
   return data;
+}
+
+function viewHasReftyped(viewdef,key) {
+  console.log("viewHasReftyped");
+  console.log(viewdef);
+  console.log(key);
+  var i,flds=viewdef.fields;
+  for(i=0;i<flds.length;i++) {
+    var fld=flds[i];
+    if (fld.name==key && _.has(fld,"type") && isRefType(fld.type)) return true;
+  }
+  return false;
 }
 
 function origRawValue(name,rec) {
@@ -1070,6 +1110,12 @@ function isRefType(type) {
   else return false;
 }
 
+function isOfType(type) {
+  if (!type) return false;
+  if (type.indexOf("of:")===0) return true;
+  else return false;
+}
+
 function isIdType(type) {
     if (!type) return false;
     if (type.indexOf("id:")===0) return true;
@@ -1080,6 +1126,18 @@ function refSubtype(type) {
   if (!type) return null;
   if (type.indexOf("ref:")!==0) return null;
   else return type.substring(4);  // length of ref:
+}
+
+function ofSubtype(type) {  
+  if (!type) return null;
+  if (type.indexOf("of:")!==0) return null;
+  else return type.substring(3);  // length of of:
+}
+
+function tableNamePart(name) {
+  if (!name) return null;
+  if (name.indexOf(".")<=0) return null;
+  else return name.substring(0,name.indexOf("."));  // table from table.field
 }
 
 function isArrayType(type) {

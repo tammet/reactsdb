@@ -147,8 +147,11 @@ var viewdefs = [
     "nameField" : "userid",
     "fields" : [  
       {"name":"id", "type":"integer", "auto":1, "edit":0, "addShow":0,"listShow":1,"filter":1}, 
-      {"name":"locationid", "type":"integer", "listShow":1, "filter":1, "help": " location which is described"},
-      {"name":"userid", "type":"integer", "listShow":1, "filter":1, "help": " user id who sent this info "},
+      {"name":"locationid", "type":"ref:locations", "listShow":1, "filter":1, "help": " location which is described"},
+      //{"name":"userid", "type":"integer", "listShow":1, "filter":1, "help": " user id who sent this info "},
+      {"name":"userid", "type":"ref:users", "listShow":0, "filter":1, "help": " userid who sent this info "},
+      {"name":"users.fullname", "type":"of:userid", "edit":0, "listShow":1, "filter":1, "help": " user name who sent this info "},
+      {"name":"users.password", "type":"of:userid", "edit":0, "listShow":1, "filter":1, "help": "password of the user"},
       {"name":"score", "type":"integer", "listShow":0, "filter":0, "help": " score given by user"},
       {"name":"status", "type":"string", "listShow":0, "filter":0, "help": "- A: active, D: deleted"},
       {"name":"created_at", "type":"datetime", "listShow":0, "filter":0}
