@@ -20,8 +20,6 @@ Main part of the demo: automatic generation of crud views and actions.
 
 Assumes the api runs ok on the database: check the server/README.md for instructions.
 
-The reactsdb javascript files are all in the js folder along with the reactjs and other utilities.
-
 No transpiling or packing necessary: assuming the Flask server is running,
 just open the browser at
 
