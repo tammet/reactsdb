@@ -13,12 +13,12 @@ from webapi.webapi_common import *
 from webapi.webapi_ddef import *
 
 # change static dir
-#static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static')
-app = Flask(__name__,static_url_path='/static',static_folder='static')
+static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../src')
+app = Flask(__name__,static_url_path='/static',static_folder=static_file_dir)
 #app = Flask(__name__)
 
 #configfile=os.path.dirname(os.path.realpath(__file__))+"/app.cfg"
-configfile="/opt/reactsdb/demo3/app.cfg"
+configfile="/opt/reactsdb/server/app.cfg"
 
 # next one was on all the time before static changing experiments
 app.config["APPLICATION_ROOT"] = "/api"

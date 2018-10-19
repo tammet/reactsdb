@@ -4,11 +4,11 @@
  
 */
 
-import * as autoutils from './autoutils.js';
-import * as autolang from './autolang.js';
-import * as autoapi from './autoapi.js';
-import * as autoreact from './autoreact.js';
-import * as automain from './automain.js';
+import * as autoutils from './auto/autoutils.js';
+import * as autolang from './auto/autolang.js';
+import * as autoapi from './auto/autoapi.js';
+import * as autoreact from './auto/autoreact.js';
+import * as automain from './auto/automain.js';
 
 var isTest=true;
 var topMenuList=["data","locations"];

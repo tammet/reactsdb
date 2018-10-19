@@ -344,38 +344,38 @@ body {
 
 <!-- standard tools -->
 
-<script src="js/jquery.min.js"></script>
-<script src="js/bootstrap.min.js"></script>
-<script src="js/underscore-min.js"></script>
+<script src="utils/jquery.min.js"></script>
+<script src="utils/bootstrap.min.js"></script>
+<script src="utils/underscore-min.js"></script>
 
 <!-- <script src="js/react.min.js"></script> -->
-<script src="js/react.development.js"></script>
-<script src="js/react-dom.development.js"></script>
+<script src="react/react.development.js"></script>
+<script src="react/react-dom.development.js"></script>
 
 
-<script src="js/bootstrap-datepicker.js"></script>
+<script src="utils/bootstrap-datepicker.js"></script>
 
 <!-- autoreact viewdefs -->
 
-<script src="js/viewdefs.js"></script>
+<script src="viewdefs.js"></script>
 
 <!-- autoreact source -->
 
-<script type="module" src="js/autoutils.js">
-<script type="module" src="js/autolang.js"></script>
-<script type="module" src="js/autoapi.js"></script>
-<script type="module" src="js/autocomp.js"></script>
-<script type="module" src="js/automain.js"></script>
-<script type="module" src="js/autoreact.js"></script>
+<script type="module" src="auto/autoutils.js"></script>
+<script type="module" src="auto/autolang.js"></script>
+<script type="module" src="auto/autoapi.js"></script>
+<script type="module" src="auto/autocomp.js"></script>
+<script type="module" src="auto/automain.js"></script>
+<script type="module" src="auto/autoreact.js"></script>
 
 <!-- data, main funs, top level and finally init -->
 
-<script src="js/data.js"></script>
-<script type="module" src="js/init.js"></script>
+<script src="data.js"></script>
+<script type="module" src="init.js"></script>
 
 <script type="module">
-import * as autoapi from './js/autoapi.js';
-import * as init from './js/init.js';
+import * as autoapi from './auto/autoapi.js';
+import * as init from './init.js';
 
 document.getElementById("loginbutton").addEventListener("click", 
   function() {
