@@ -3,15 +3,15 @@ reactsdb source, utils and demo parts for a browser
 
 Files and folders:
 
-index.html - directly usable demo html, does not require transpiling or packing
-viewdefs.js - defined views for the demo
-init.js - initialization funs for the demo
-data.js - initialization data for the demo
-auto/ - main auto*.js files for reactsdb
-utils/ - utility js files for reactsdb
-css/ - css files for reactsdb and demo
-img/ - images for reactsdb and demo
-react/ - original unchanged react.js files
+* index.html - directly usable demo html, does not require transpiling or packing
+* viewdefs.js - defined views for the demo
+* init.js - initialization funs for the demo
+* data.js - initialization data for the demo
+* auto/ - main auto*.js files for reactsdb
+* utils/ - utility js files for reactsdb
+* css/ - css files for reactsdb and demo
+* img/ - images for reactsdb and demo
+* react/ - original unchanged react.js files
 
 Open index.html
 ================
