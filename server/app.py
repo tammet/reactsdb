@@ -3,8 +3,7 @@
 import sys,cgi,psycopg2,string,time,os,types
 import signal,datetime,logging
 
-# send_from_directory is for changing static dir
-from flask import Flask, request, jsonify, make_response #, send_from_directory
+from flask import Flask, request, jsonify, make_response
 
 from webapi.webapi_ctrl import *
 from webapi.webapi_auth import *
@@ -12,18 +11,14 @@ from webapi.webapi_special import *
 from webapi.webapi_common import *
 from webapi.webapi_ddef import *
 
-# change static dir
-static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../src')
+# change static dir and set configfile path
+current_dir = os.path.dirname(os.path.realpath(__file__))
+static_file_dir = os.path.join(current_dir, '../src')
+configfile=os.path.join(current_dir, 'app.cfg')
+
 app = Flask(__name__,static_url_path='/static',static_folder=static_file_dir)
 #app = Flask(__name__)
-
-#configfile=os.path.dirname(os.path.realpath(__file__))+"/app.cfg"
-configfile="/opt/reactsdb/server/app.cfg"
-
-# next one was on all the time before static changing experiments
 app.config["APPLICATION_ROOT"] = "/api"
-
-
 
 @app.route('/api/',methods=['POST','GET','PUT'])
 @app.route('/api',methods=['POST','GET','PUT'])

@@ -5,7 +5,7 @@
 
 import sys,json,psycopg2,re,string,hashlib
 
-from webapi_common import *
+from .webapi_common import *
 
 # ----------- universal database functions -------------
 
@@ -271,18 +271,18 @@ def get_list_data(req,table,groupcheck=True):
       rfields=rfields.split(",")
       rfields=[x.strip() for x in rfields] 
   flds=req.dtables[table]['fields']
-  if req.dtables[table].has_key('table'):
+  if 'table' in req.dtables[table]:
     table=req.dtables[table]['table']
   fldset=""
   #fldlst=[]
   for el in flds:    
-    if el.has_key("dummy") and el["dummy"]: continue
-    if el.has_key('name'): 
+    if "dummy" in el and el["dummy"]: continue
+    if 'name' in el: 
       name=el['name']      
       if rfields:
         if not(name in rfields): continue
       if fldset!="": fldset+=", "
-      if el.has_key('type'):
+      if 'type' in el:
         if el['type']=='timestamp' or el['type']=='datetime': 
           fldset+="to_char("+table+"."+name+""",'YYYY-MM-DD"T"HH24:MI:SS') as """
           fldset+=name
@@ -354,7 +354,7 @@ def update_data(req,table,keyfield,datalist,groupcheck=True):
   if not datalist or type(datalist)!=type([1]) or len(datalist)<1: 
     handle_error(req,4,'no data given for updating')    
   flds=req.dtables[table]['fields']
-  if req.dtables[table].has_key('tablename'):
+  if 'tablename' in req.dtables[table]:
     table=req.dtables[table]['tablename']
   if table=="networks": grpfield="id"
   else: grpfield=req.group_field  
@@ -366,7 +366,7 @@ def update_data(req,table,keyfield,datalist,groupcheck=True):
   #print("cp grpcl",grpcl)
   check=[]
   for el in flds:
-    if el.has_key('name'): check.append(el['name'])   
+    if 'name' in el: check.append(el['name'])   
   reslst=[]  
   for data in datalist:   
     tmp=data_contains_unknown_fields(req,data,check)
@@ -374,14 +374,14 @@ def update_data(req,table,keyfield,datalist,groupcheck=True):
       handle_error(req,11,'unknown fields in data: '+str(tmp))  
     salt="salty"                         
     for x in flds:
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue  
       # force add new salt if "auto":"salt" present in fields
       # and "password" present in data
       if "password" in data and "auto" in x and x["auto"]=="salt": 
         salt=safe_random_string(8)    
         data[name]=salt 
-      if data.has_key(name) and data[name] and x.has_key('type'):
+      if name in data and data[name] and 'type' in x:
         try:
           if x['type']=='integer': data[name]=int(data[name])          
           elif x['type']=='float': data[name]=float(data[name])
@@ -391,7 +391,7 @@ def update_data(req,table,keyfield,datalist,groupcheck=True):
       else: continue  
     # second loop just for hashing password if given          
     for x in flds:
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue       
       if "auto" in x and x["auto"]=="password":
         if name in data and data[name]:
@@ -402,24 +402,24 @@ def update_data(req,table,keyfield,datalist,groupcheck=True):
     fldsets=""
     for x in flds:
       name=None
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue
       if name==keyfield: continue
-      if not data.has_key(name): continue
-      if x.has_key('auto') and x['auto']==1: continue
+      if name not in data: continue
+      if 'auto' in x and x['auto']==1: continue
       if fldsets!="": fldsets+=", "    
-      if  x.has_key('auto') and x['auto']=='now()':
+      if  'auto' in x and x['auto']=='now()':
         fldsets+=name+"="+"now()" 
-        if data.has_key(name): del data[name] 
-      elif  x.has_key('auto') and x['auto']=='req.username':
+        if name in data: del data[name] 
+      elif  'auto' in x and x['auto']=='req.username':
         fldsets+=name+"=%("+name+")s"
         data[name]=req.username        
-      elif x.has_key('default') and not data[name]:
+      elif 'default' in x and not data[name]:
         if x['default']=='now()': fldsets+=name+"=now()"
         else: fldsets+=name+"='"+str(x['default'])+"'"     
-        if data.has_key(name): del data[name] 
+        if name in data: del data[name] 
       else:
-        if x.has_key('type'):
+        if 'type' in x:
           if x['type']=='timestamp' or x['type']=='datetime': 
             fldsets+=name+"=to_timestamp(%("+name
             fldsets+=")s, 'YYYY-MM-DD HH24:MI:SS')"
@@ -447,11 +447,11 @@ def add_data(req,table,datalist):
   if not datalist: 
     handle_error(req,4,'no data given for adding')
   flds=req.dtables[table]['fields']
-  if req.dtables[table].has_key('tablename'):
+  if 'tablename' in req.dtables[table]:
     table=req.dtables[table]['tablename']
   check=[]
   for el in flds:
-    if el.has_key('name'): check.append(el['name'])  
+    if 'name' in el: check.append(el['name'])  
   reslst=[]  
   #print("cpy1 datalist:",str(datalist))
   for data in datalist:   
@@ -463,13 +463,13 @@ def add_data(req,table,datalist):
     #data=set_missing_input_data_nullvalues(req,data,check)
     salt="salty"
     for x in flds:
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue   
       # force add salt if "auto":"salt" present in fields
       if "auto" in x and x["auto"]=="salt": 
         salt=safe_random_string(8)    
         data[name]=salt
-      if name in data and data[name]!=None and x.has_key('type'):
+      if name in data and data[name]!=None and 'type' in x:
         try:
           if x['type']=='integer': data[name]=int(data[name])          
           elif x['type']=='float': data[name]=float(data[name])
@@ -478,7 +478,7 @@ def add_data(req,table,datalist):
           handle_error(req,10,'data with wrong type given for field '+str(name))
     # second loop just for hashing password if given          
     for x in flds:
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue       
       if "auto" in x and x["auto"]=="password":
         if name in data and data[name]:
@@ -489,23 +489,23 @@ def add_data(req,table,datalist):
     for x in flds:
       name=None
       # wrong fld format?
-      if x.has_key('name'): name=x['name']
+      if 'name' in x: name=x['name']
       else: continue  
       # name key in data?
       if not (name in data):
         # no corresponding key in data
-        if x.has_key('auto') and x['auto']=='now()':
+        if 'auto' in x and x['auto']=='now()':
           if fldnames!="": fldnames+=", "
           if fldsets!="": fldsets+=", "
           fldnames+=name
           fldsets+="now()" 
-        elif x.has_key('auto') and x['auto']=='req.username':
+        elif 'auto' in x and x['auto']=='req.username':
           if fldnames!="": fldnames+=", "
           if fldsets!="": fldsets+=", "
           fldnames+=name
           fldsets+="%("+name+")s"
           data[name]=req.username
-        elif x.has_key('default'):
+        elif 'default' in x:
           if fldnames!="": fldnames+=", "
           if fldsets!="": fldsets+=", "
           fldnames+=name
@@ -520,7 +520,7 @@ def add_data(req,table,datalist):
         if fldnames!="": fldnames+=", "
         if fldsets!="": fldsets+=", "
         fldnames+=name
-        if x.has_key('type'):
+        if 'type' in x:
           if x['type']=='timestamp' or x['type']=='datetime': fldsets+='to_timestamp(%('+name+")s, 'YYYY-MM-DD HH24:MI:SS')"
           elif x['type']=='date': fldsets+='to_date(%('+name+")s, 'YYYY-MM-DD')"
           elif x['type']=='hourminute': fldsets+='to_timestamp(%('+name+")s, 'HH24:MI')"
@@ -706,7 +706,7 @@ def parse_filter(req,filter,table,extraflds=None):
     if not is_known_field(req,fld,extraflds):
       print("failed!")
       handle_error(req,9,'unknown field in filter, check ddef')     
-    if extraflds and extraflds.has_key(fld):
+    if extraflds and fld in extraflds:
       fld=extraflds[fld]      
     op=lst[i*3+1].strip()
     if not op in ["=",">","<","<=",">=","!=","like","ilike","in"]:
@@ -714,7 +714,7 @@ def parse_filter(req,filter,table,extraflds=None):
     val=None    
     flds=req.dtables[table]['fields']
     for el in flds:    
-      if el.has_key('name') and el["name"]==fld and el.has_key('type'):
+      if 'name' in el and el["name"]==fld and 'type' in el:
         if el['type']=='timestamp' or el['type']=='datetime':
           val=string.replace(lst[i*3+2].strip(),'T',' ')
           val="to_timestamp('"+val+"','YYYY-MM-DD HH24:MI:SS')"
@@ -783,14 +783,14 @@ def parse_joins(req,joins,table):
     flds=req.dtables[tbl]['fields']
     foundjoin=None
     for el in flds:    
-      if el.has_key('name') and el["name"]==joinfld:
+      if 'name' in el and el["name"]==joinfld:
         foundjoin=el["name"] 
         break
     if not foundjoin:
       handle_error(req,9,'unknown joined table field in join, check ddef')   
     found=None
     for el in flds:    
-      if el.has_key('name') and el["name"]==newfld:
+      if 'name' in el and el["name"]==newfld:
         foundnew=el["name"] 
         break
     if not foundnew:
@@ -841,14 +841,14 @@ def old_parse_joins(req,joins,table):
     flds=req.dtables[tbl]['fields']
     foundjoin=None
     for el in flds:    
-      if el.has_key('name') and el["name"]==joinfld:
+      if 'name' in el and el["name"]==joinfld:
         foundjoin=el["name"] 
         break
     if not foundjoin:
       handle_error(req,9,'unknown joined table field in join, check ddef')   
     found=None
     for el in flds:    
-      if el.has_key('name') and el["name"]==newfld:
+      if 'name' in el and el["name"]==newfld:
         foundnew=el["name"] 
         break
     if not foundnew:
@@ -917,7 +917,7 @@ def groupclause(req,table,field,writeflag=False):
 
 
 def is_known_field(req,fld,extraflds=None):  
-  if extraflds and extraflds.has_key(fld): return True
+  if extraflds and fld in extraflds: return True
   try:
     tmp=req.dtables[req.table]["fields"]
     for el in tmp:
@@ -928,14 +928,14 @@ def is_known_field(req,fld,extraflds=None):
 
 def data_contains_unknown_fields(req,data,check):
   #print("cpx1: ",str(data))
-  for key in data.keys():
+  for key in list(data.keys()):
     if not key in check:
       return key
   return False    
 
 def set_missing_input_data_nullvalues(req,data,check):  
   for el in check:
-    if not data.has_key(el):
+    if el not in data:
       data[el]=None
   return data                
 

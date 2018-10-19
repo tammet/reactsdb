@@ -9,9 +9,9 @@ import smtplib # for email
 from email.mime.text import MIMEText # for email
 from configparser import SafeConfigParser
 
-from webapi_model import *
-from webapi_common import *
-from webapi_ddef import *
+from .webapi_model import *
+from .webapi_common import *
+from .webapi_ddef import *
 
 # ---- authentication and authorization ---- 
 
@@ -104,7 +104,7 @@ def get_userdata_by_username(req,username):
 def get_set_req_groups(req):    
   groups=db_get_usergroups(req,req.userid,req.usergroup,req.usertopgroup)
   req.usernamedgroups=groups
-  req.usergroups=map(lambda x: x["id"], groups)
+  req.usergroups= req.usergroups=[x["id"] for x in groups]
 
 
 def authorize_show(req,table,op):
@@ -166,8 +166,8 @@ def handle_password_login(req):
   """ Assumes username, salt and password fields in db where
       password in db must be hashlib.sha512(<givenpwd>+<user salt in db>).hexdigest()
   """
-  if not (req.stdparams.has_key("username") and req.stdparams.has_key("password") and 
-          req.stdparams["username"] and req.stdparams["password"]):
+  if not ("username" in req.stdparams and "password" in req.stdparams and 
+           req.stdparams["username"] and req.stdparams["password"]):
     handle_error(req,3,'username and password parameters missing') 
   else:    
     username=req.stdparams["username"]
@@ -189,7 +189,11 @@ def handle_password_login(req):
       handle_error(req,2,'authentication failure','no salt or password found in db')
     salt=str(userdata["salt"])
     storedpassword=str(userdata["password"])
-    passhash=hashlib.sha512(givenpassword+salt).hexdigest()
+
+    #passhash=hashlib.sha512(givenpassword+salt).hexdigest()  # python2
+    passhash=hashlib.sha512((givenpassword+salt).encode('utf-8')).hexdigest()   # python3
+    
+
     #print("salt:",salt)
     #print("storedpassword:",storedpassword)  
     #print("passhash      :",passhash)

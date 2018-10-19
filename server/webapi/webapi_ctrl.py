@@ -7,11 +7,11 @@
 import sys,psycopg2,string,time,os,base64
 import types,random,signal,datetime,hashlib,subprocess
 
-from webapi_auth import *
-from webapi_special import *
-from webapi_model import *
-from webapi_common import *
-from webapi_ddef import *
+from .webapi_auth import *
+from .webapi_special import *
+from .webapi_model import *
+from .webapi_common import *
+from .webapi_ddef import *
 
 #import cgi, cgitb
 #cgitb.enable(format='text')
@@ -34,7 +34,7 @@ def ctrl_main(configfile,inmethod=None,inparams=None,subpath=None,headers=None,c
   if req.flask:
     inparams=flask_parse_std_parameters(req,inmethod,inparams)
     req.inparams=make_restful_inparams(req,inmethod,inparams,subpath,headers)
-    print("req.inparams:",str(req.inparams))
+    print(("req.inparams:",str(req.inparams)))
     #print("req.start",req.start)
     #print("req.count",req.count)
     #print("req.filters",req.filters)
@@ -119,12 +119,12 @@ def flask_parse_std_parameters(req,inmethod,inparams):
   #print("invalues:",invalues)
   # check if we recognize all params passed in request
   if inparams:   
-    for key in inparams.keys():
-      if not invalues.has_key(key):
+    for key in list(inparams.keys()):
+      if key not in invalues:
         handle_error(req,4,"unknown parameter name: "+str(key))
   #print("cp2") 
   # loop over all recognizable invalues given above in the function   
-  for param in invalues.keys():
+  for param in list(invalues.keys()):
     #print("param:",param)
     if param in inparams and inparams[param]:
       #print("invalues[param]:",invalues[param])
@@ -261,11 +261,11 @@ def cgi_parse_std_parameters(req):
       handle_error(req,3,"received data is not correct json")  
     if not data or (type(data)!=type({"a":1})):
       handle_error(req,3,"received data is not a json object {...}")
-    for key in data.keys():
-      if not invalues.has_key(key):
+    for key in list(data.keys()):
+      if key not in invalues:
         handle_error(req,4,"unknown parameter name: "+str(key))
-    for param in invalues.keys():
-      if data.has_key(param) and data[param]:
+    for param in list(invalues.keys()):
+      if param in data and data[param]:
         res[param]=data[param]
       else:
         res[param]=invalues[param]
@@ -273,11 +273,11 @@ def cgi_parse_std_parameters(req):
   else:  
     # get case
     inparams=cgi.FieldStorage()   
-    for key in inparams.keys():
-      if not invalues.has_key(key):
+    for key in list(inparams.keys()):
+      if key not in invalues:
         handle_error(req,4,"unknown parameter name: "+str(key))  
-    for param in invalues.keys():
-      if inparams.has_key(param) and inparams[param].value:
+    for param in list(invalues.keys()):
+      if param in inparams and inparams[param].value:
         if type(invalues[param])==type(2): # integer, must convert
           try:
             res[param]=int(inparams[param].value)
@@ -296,7 +296,7 @@ def dispatch(req):
   if req.table=="messages":
     handle_messages(req)
   elif req.op=='count':                  
-    if dtables.has_key(req.table):
+    if req.table in dtables:
       handle_count(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")    
@@ -313,7 +313,7 @@ def dispatch(req):
       handle_reports_list(req,req.table)
     elif req.table=="events":
       handle_events_list(req,req.table)    
-    elif dtables.has_key(req.table):
+    elif req.table in dtables:
       handle_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")   
@@ -328,14 +328,14 @@ def dispatch(req):
       handle_reports_counted_list(req,req.table)  
     elif req.table=="events":
       handle_events_counted_list(req,req.table)   
-    elif dtables.has_key(req.table):
+    elif req.table in dtables:
       handle_counted_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")      
   elif req.op=='update':
     #if req.table=='users':
     #  handle_update_users(req)
-    if dtables.has_key(req.table):
+    if req.table in dtables:
       handle_update(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")         
@@ -344,7 +344,7 @@ def dispatch(req):
     #  handle_add_users(req)   
     if req.op_modifier=="image" and req.inparams["data"][0]:
       handle_add_image(req, req.inparams["data"][0]) 
-    elif dtables.has_key(req.table):
+    elif req.table in dtables:
       handle_add(req,req.table)     
     else:
       handle_error(req,4,"unknown table parameter") 
@@ -353,7 +353,7 @@ def dispatch(req):
     #  handle_delete_users(req)  
     if req.op_modifier=="image":
       handle_delete_image(req, req.inparams["data"][0])
-    elif dtables.has_key(req.table):
+    elif req.table in dtables:
       handle_delete(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")       
@@ -424,7 +424,7 @@ def handle_counted_list(req,table,extraflds=None):
   else:   
     # get the real count
     countdata=get_count_data(req,table,True,extraflds) 
-    if not countdata or (not countdata.has_key("count")) or countdata["count"]<1:
+    if not countdata or ("count" not in countdata) or countdata["count"]<1:
       out_format_list(req,{"count":0,"list":[]})
       return
     out_format_list(req,{"count": countdata["count"],"list":data})

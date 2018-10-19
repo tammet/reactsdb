@@ -8,9 +8,9 @@ import types,random,signal,datetime,logging,hashlib,subprocess
 import smtplib # for email
 from email.mime.text import MIMEText # for email
 
-from webapi_auth import *
-from webapi_model import *
-from webapi_common import *
-from webapi_ddef import *
+from .webapi_auth import *
+from .webapi_model import *
+from .webapi_common import *
+from .webapi_ddef import *
 
   

@@ -3,7 +3,7 @@
 
 # common global Request object, err handling and common funs of webapi
 
-import sys,json,os,logging
+import sys,json,os,logging, random, string
 from configparser import SafeConfigParser
 from flask import send_file
 
@@ -102,11 +102,14 @@ def out_format_empty(req):
 # ----- random strings -----
 
 def safe_random_string(l):
+  s=''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(l))
+  """
   charset="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
   random_bytes = os.urandom(l)
   len_charset = len(charset)
   indices = [int(len_charset * (ord(byte) / 256.0)) for byte in random_bytes]
   s="".join([charset[index] for index in indices])
+  """
   return s
 
 # ---- error handling -------
