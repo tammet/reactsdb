@@ -5,10 +5,12 @@
 */
 
 import * as autoutils from './autoutils.js';
+import * as autoformdata from './autoformdata.js';
 import * as autolang from './autolang.js';
 import * as autoapi from './autoapi.js';
 import * as autoreact from './autoreact.js';
 import * as autocomp from './autocomp.js';
+import * as autoedit from './autoedit.js';
 
 // ====== module start =========
   
@@ -51,7 +53,7 @@ class AutoResource extends React.Component{
   prepareState(input) { 
     autoutils.debug("prepareState with input");
     var viewdef=_.findWhere(input.viewdefs, {name:input.viewname});   
-    var groups=autoreact.getGroups(viewdef,"view"); // default prepare groups for view
+    var groups=autoreact.getFormGroups(viewdef,"view"); // default prepare groups for view
     var groupname=null;
     if (groups) {
       if (input.groupname) groupname=input.groupname;
@@ -598,7 +600,7 @@ class AutoMain extends React.Component{
       datarow = this.props.data;
       return (
         ce("div", {className: "autoMain"},
-          ce(autoreact.AutoEdit, {datarow: datarow, auxdata: this.props.auxdata,
+          ce(autoedit.AutoEdit, {datarow: datarow, auxdata: this.props.auxdata,
                         prefill:this.props.prefill,
                         viewdef: this.props.viewdef, rowid: this.props.rowid,
                         groupname: this.props.groupname, 
@@ -691,7 +693,7 @@ class AutoLeftMenu extends React.Component{
       usedata=this.props.parent.data;
     else 
       usedata=this.props.data;
-    filter=makeFilterFromRestriction(restriction,usedata);
+    filter=autoformdata.makeFilterFromRestriction(restriction,usedata);
     /*
     autoutils.debug("made filter from restr "+restriction);
     autoutils.debug(this.props.parent);
@@ -740,27 +742,7 @@ class AutoLeftMenu extends React.Component{
 
 //"main_resource_parent_id={main_resource_id}&service_type=mitteelektrooniline_teenus"
 
-function makeFilterFromRestriction(r,data) {
-  var pairs,keyvals,i,el,kval,dval,res=[];
-  if (!r) return [];
-  pairs=r.split("&");
-  for (i=0; i<pairs.length; i++) {
-    keyvals=pairs[i].split("=");
-    if (!keyvals || keyvals.length!=2) continue;    
-    //if (keyvals[0]=="main_resource_id") continue;    
-    kval=keyvals[1];
-    if (kval.charAt(0)=="{" && kval.charAt(kval.length-1)=="}" && data!=null) {
-      kval=kval.substring(1);
-      kval=kval.substring(0,kval.length-1);
-      dval=data[kval];
-    } else {
-      dval=kval;
-    }
-    el=[keyvals[0],"=",dval];
-    res.push(el);            
-  }
-  return res;  
-}
+
 
 function getRefKeyFromRestriction(r) {
   var pairs,keyvals,i,kval;

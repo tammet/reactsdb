@@ -290,11 +290,11 @@ button .help {
     color: #666666;
 }
 
-.autoGroupMenuTabs {
+.autoFormGroupMenuTabs {
 	margin-top: 15px;
 }
 
-.autoGroupLeftMenu {
+.autoFormGroupLeftMenu {
   margin-top: 0;
   padding-left: 0;
   list-style-type: none;  

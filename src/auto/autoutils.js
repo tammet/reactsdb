@@ -22,7 +22,35 @@ function debug(x) {
 }
 
 // debug = function(){};  // this turns debugging off 
-  
+
+// -- environment --
+
+
+function isTouchDevice() {
+  return 'ontouchstart' in window        // works on most browsers 
+      || navigator.maxTouchPoints;       // works on IE10/11 and Surface
+};
+
+// ---- direct dom manipulation ------
+
+function removeAlert() {
+  //$("#alertmessage").remove();
+  //$("#alertmessage").html("");
+  $("#alertmessage").hide();
+}
+
+
+// --- react core ----
+
+function makeKey(s) {
+  return s;
+}
+
+function makeUniqueKey(s) {
+  return _.uniqueId(s);
+}
+
+
 // ---- getting some defaults -------
   
 // maximal number of rows shown on a page    
@@ -34,10 +62,6 @@ function getListLimit() {
 function getListValueLen() {
   return globalState.listValueLen;  
 }  
-
-function getModalHelpLengthLimit() {
-  return globalState.modalHelpLengthLimit;
-}
 
 // ------------- user access rights and info -----------
   
@@ -219,306 +243,6 @@ function htmlEscape(str) {
     .replace(/>/g, '&gt;');
 }
 
-function makeFilterParams(ctxt,op,viewdef) { 
-  //debug("makeFilterParams");
-  var i=0,input,name,type,value,cond,deffields,field,fields=[],key,date,fieldtype;
-  var args={},filter=[], kind, token;
-  var valueInputs=$.find("[data-filter='value']");  
-  var minvalueInputs=$.find("[data-filter='minvalue']");  
-  var maxvalueInputs=$.find("[data-filter='maxvalue']");
-  args={"op":"get","path": getPath(viewdef)};
-  filter=[];
-  if (!viewdef) return null;
-  //debug("viewdef");
-  //debug(viewdef);
-  //kind=getKind(viewdef,{});
-  //debug("kind");
-  //debug(kind);    
-  /*
-  if (kind!==null) {
-    args["kind"]=kind;
-    filter.push(["kind","=",kind]);
-  } 
-  */  
-  token=getAuthToken();
-  if (token) args["token"]=token;  
-  // create a filter
-  for(i=0;i<valueInputs.length;i++) {
-    input=valueInputs[i];
-    name=input["name"];
-    type=input.getAttribute("data-type");
-    value=formvalueToJson(input["value"],type);
-    
-    //if (!name || (!value && value!==false && value!==0) || _.isObject(value) ) continue;
-    if (!name || (!value && value!==false && value!==0)) continue;
-    if (_.isObject(value) && !_.isArray(value)) continue;
-    if (_.isArray(value) && value.length<1) continue;
-    if (value && _.isString(value)) value=value.trim();
-        
-    field=_.findWhere(viewdef["fields"], {"name":name});
-    if (field && field.type) fieldtype=field.type;    
-    //console.log(name+" "+type+" "+fieldtype);    
-    if (type==="string" && !(field && field["values"] && _.isArray(field["values"]))) {
-      cond=[name,"ilike","%"+value+"%"];       
-    } else if (type=="array:string") {
-      if (_.isArray(value)) cond=[name,"?&",value];      
-      else cond=[name,"?&",[value]]; 
-    } else if (fieldtype && fieldtype.startsWith("array:ref:")) {
-      if (_.isArray(value)) cond=[name,"?&",value];                  
-      //"[\"urn:fdc:riha.eesti.ee:2016:area:519048\"]"]]
-      //else cond=[name,"?&",[value]];      
-      else cond=[name,"?&",JSON.stringify([value])];
-    } else {    
-      cond=[name,"=",value];
-    }  
-    filter.push(cond);
-  }
-  for(i=0;i<minvalueInputs.length;i++) {
-    input=minvalueInputs[i];
-    name=input["name"];
-    type=input.getAttribute("data-type");
-    value=formvalueToJson(input["value"],type);
-    if (!name || (!value && value!==false && value!==0) || _.isObject(value)) continue;
-    //args+="&"+name+"="+encodeURIComponent(value);  
-    cond=[name,">=",value];
-    filter.push(cond);
-  }
-  for(i=0;i<maxvalueInputs.length;i++) {
-    input=maxvalueInputs[i];
-    name=input["name"];
-    type=input.getAttribute("data-type");
-    value=formvalueToJson(input["value"],type);
-    if (!name || (!value && value!==false && value!==0) || _.isObject(value)) continue;
-    //args+="&"+name+"="+encodeURIComponent(value);  
-    cond=[name,"<=",value];
-    filter.push(cond);
-  }
-  // extend filter to exclude old versions
-  if (viewdef.name=="infosystem") {
-    date=localDateTimeISO(); //!!!
-    //cond=["end_date","null_or_>",date]; 
-    cond=["end_date","isnull",""];
-    filter.push(cond);    
-  }
-  // select fields to ask for
-  deffields=viewdef["fields"];
-  if (deffields) {
-    for (i=0; i<deffields.length; i++) {
-      if (deffields[i]["listShow"]!==false) fields.push(deffields[i]["name"]);
-    }
-  }  
-  key=viewdef["key"];
-  if (key && _.indexOf(deffields,key)<0) fields.push(key);
-  if (_.has(viewdef,"uri")) fields.push("uri");
-  args["fields"]=fields;  
-  if (filter.length!=0) args["filter"]=filter; 
-  return args;  
-}
-
-
-function getFilterData(ctxt,op,viewdef) { 
-  var i=0,input,name,type,value, res;  
-  var valueInputs=$.find("[data-filter='value']");  
-  var minvalueInputs=$.find("[data-filter='minvalue']");  
-  var maxvalueInputs=$.find("[data-filter='maxvalue']");  
-  res={};
-  for(i=0;i<valueInputs.length;i++) {
-    input=valueInputs[i];
-    name=input["name"];
-    value=input["value"];
-    //console.log("value"+"!"+value+"|");
-    if (!value && value!==0) value="";
-    else value=value.trim();  
-    //console.log("2value"+"!"+value+"|");    
-    res[name]=value;
-  }       
-  return res;  
-}
-
-
-
-// parent is used only for connecting to the parent
-
-function makeSaveParams(ctxt,viewdef,parent) { 
-  var i=0,input,name,type,value,content,encoding,j,options,opt,tmp;
-  var token,key,keyValue,mustfill,filledok;
-  debug("makeSaveParams");
-  //debug("parent:");
-  //debug(parent);
-  var args={},save=[];
-  var emptyInputs=$.find("[data-save='empty']");
-  var valueInputs=$.find("[data-save='value']");
-  var table="infosystem";      
-  args={"op":"get","path": getPath(viewdef)};
-  token=getAuthToken();
-  if (token) args["token"]=token; 
-  save={};
-  var complexes={}, complexel, complexsubel, parentname, arrayindex, keys;
-  key=viewdef["key"];  
-  filledok=true;  
-  for(i=0;i<emptyInputs.length;i++) { 
-    input=emptyInputs[i];
-    name=input["name"];
-    save[name]=null;
-  }    
-  for(i=0;i<valueInputs.length;i++) {
-    input=valueInputs[i];
-    name=input["name"];
-    console.log(name);
-    if (name.indexOf(".")>0) continue; 
-    type=input.getAttribute("data-type");
-    encoding=input.getAttribute("data-encoding");    
-    value=formvalueToJson(input["value"],type,encoding);
-    parentname=input.getAttribute("data-parentname");
-    arrayindex=input.getAttribute("data-arrayindex");
-    mustfill=input.getAttribute("data-mustfill");
-    if (name===key) keyValue=value;
-    if (parentname && arrayindex) {
-      if (!complexes[parentname]) complexes[parentname]=[];
-      complexel=complexes[parentname];
-      if (!complexel[parseInt(arrayindex)]) complexel[parseInt(arrayindex)]={};
-      complexsubel=complexel[parseInt(arrayindex)];
-      complexsubel[name]=value;     
-    } else if (type=="base64") {   
-      content=removeBase64Header(input.getAttribute("data-filecontent"));
-      if (content) {
-        save["filename"]=value.replace(/^.*\\/, "");
-        save["content"]=content;
-        save["mime"]=getMimeFromName(value);
-      }  
-      //save["kind"]="document";      
-      args["path"]="db/document/";
-      //args["kind"]="document";
-    } else if (type=="array:string" && input.options) {
-      options=input.options;
-      //debug(options);
-      value=[];
-      for (j=0; j<options.length; j++) {
-        opt = options[j];
-        if (opt.selected) {
-          value.push(opt.value);          
-        }
-      }       
-      save[name]=value;
-    } else {
-      if (!name) continue;
-      if (!value && (value!==0 && value!==false && value!==[])) value=null;       
-      save[name]=value;
-    }      
-    if (mustfill==="true" && !input["value"]) filledok=false;
-  }
-  keys=_.keys(complexes);
-  for(i=0;i<keys.length;i++) {
-    key=keys[i];
-    save[key]=complexes[key];
-  }
-  /*
-  if (ctxt.state.rowid) args["key"]=ctxt.state.rowid;
-  else {
-    // Insertion of the new record. We should set owner field:
-    //if (!save["owner"]) save["owner"]=userOrganizationCode();
-  }
-  */
-  //if (!save["creation_date"]) save["creation_date"]=localDateTimeISO();
-
-  // Apply filters (they contain also parent key assignement):
-  /*
-  if (false) { // (parent && parent.filter) {
-    var filter = parent.filter;
-    for (var i = 0; i < filter.length; i++) {
-      if (filter[i][1] === "=") {
-        save[filter[i][0]] = filter[i][2];
-      }
-    }
-  } else {
-    // No parent. We should set "owner" field, if this is not update:
-  }
-  */
-  args["data"]=save;
-  if (!filledok) return false;
-  return args;  
-}
-
-function localDateTimeISO() {
-  var s,d=new Date();
-  s=d.getFullYear()+"-"+pad0(d.getMonth()+1)+"-"+pad0(d.getDate())+"T";
-  s+=pad0(d.getHours())+":"+pad0(d.getMinutes())+":"+pad0(d.getSeconds());
-  return s;
-}
-
-function formatDate(isotimestr) {
-  var res,datestr=localDateTimeISO().slice(0,10);
-  if (isotimestr && isotimestr.startsWith(datestr)) res=isotimestr.slice(10);
-  else res=isotimestr;
-  return res; 
-}
-
-function formatDateEnd(start,end) {  
-  if (!start || start.length<14 || end.length<14) return end;
-  if (start.slice(0,10)===end.slice(0,10)) {
-    return end.slice(11);
-  } else {
-    return end;
-  }
-}
-
-/*
-function commonPrefix(array) {
-  var A=array.concat().sort(), 
-      a1=A[0], a2=A[A.length-1], L=a1.length, i=0;
-  while(i<L && a1.charAt(i)===a2.charAt(i)) i++;
-  return a1.substring(0,i);
-}
-*/
-
-function pad0(num) {
-  var norm = Math.abs(Math.floor(num));
-  return (norm < 10 ? '0' : '') + norm;
-};
-
-function formvalueToJson(value,type,encoding) {
-  var tmp,i;
-  if (encoding==="json") {
-    if (value==="") return null;
-    return JSON.parse(value);
-  }  
-  if (type=="date") {
-    return dateToIso(value);
-  } else if (type=="boolean") {
-    if (value==="true") return true;
-    else if (value==="false") return false;
-    else return null;
-  } else if (type=="integer") {
-    if (!value && value!==0) return null;
-    tmp=parseInt(value);
-    if (tmp || tmp===0) return tmp;    
-    else return null;
-  } else if (type=="number") {
-    if (!value && value!==0) return null;
-    tmp=Number(value);
-    if (isNaN(value)) return null;    
-    else return tmp;  
-  } else if (type=="xxxxxfile") {  
-    var fileCount,i;
-    //debug(value);
-    //for (i=0, fileCount=uploadInput.files.length; i < fileCount; i++) {
-    //debug("start"+uploadInput.files[i]+"end");  
-  } else if (type=="array:string") {
-    if (!value) return [];
-    tmp=value.split(",");
-    tmp=_.map(tmp,function(x) { return x.trim() });    
-    return tmp;
-  } 
-  else return value;  
-}
-  
-function getStateParamsFilter(stateparams) {
-  if (!stateparams) return null;
-  if (stateparams["filter"]) return stateparams["filter"];
-  if (!stateparams["parent"]) return null;
-  return stateparams["parent"]["filter"];
-}
-
 
 function getTable(viewdef) {
   if (viewdef && viewdef["table"]) return viewdef["table"];
@@ -565,127 +289,6 @@ function getViewdef(name) {
   return null;
 }
 
-function calcTestRights(viewdefs) {
-  var rights = {};
-  for (var i = 0; i < viewdefs.length; i++) {
-    rights[viewdefs[i].object] = {
-      '10' : {
-        'read' : 2,
-        'create' : 2,
-        'update': 2,
-        'delete' : 2
-      }
-    };
-  }
-  return rights;
-}
-
-  /**
-   * Translates user rights data into user rights object
-   * @param data User rights array
-   * @returns {object} User rights object
-   */
-function calcRights(data) {
-  if (data === null || data === undefined) return null;
-  var rights = {};
-  for (var i = 0; i < data.length; i++) {
-    var kind = data[i].kind;
-    var access_restriction = data[i].access_restriction.toString();
-    if (!_.has(rights, kind)) rights[kind] = {};
-    if (!_.has(rights[kind], access_restriction)) {
-      rights[kind][access_restriction] = data[i];
-    } else {
-      rights[kind][access_restriction].read =   Math.max(rights[kind][access_restriction].read,   data[i].read);
-      rights[kind][access_restriction].create = Math.max(rights[kind][access_restriction].create, data[i].create);
-      rights[kind][access_restriction].update = Math.max(rights[kind][access_restriction].update, data[i].update);
-      rights[kind][access_restriction].delete = Math.max(rights[kind][access_restriction].delete, data[i].delete);
-    }
-  }
-  return rights;
-}
-
-  /**
-   * Checks if user has right to perfom specified action.
-   * @param rights User rights object
-   * @param kind Object kind
-   * @param access_restriction Object access restriction
-   * @param action Action
-   * @returns {number} Returns action level for specified action
-   */
-function getActionLevel(rights, kind, access_restriction, action) {
-  var objectAccess = parseInt(access_restriction);
-  if (isNaN(objectAccess)) objectAccess = 0;
-
-  if (rights === null || !_.has(rights, kind)) {
-    // Special case: read-only access for all objects is always granted (in case of restricted objects the server is
-    // filtering restricted content out):
-    if (action === "read") return 2;
-    return 0;
-  }
-
-  var keys = _.keys(rights[kind]);
-  var selectedRightAccess = null;
-  var actionLevel = 0;
-  // Read access is always granted:
-  if (action === "read") actionLevel = 2;
-  for (var i = 0; i < keys.length; i++) {
-    var rightAccess = parseInt(keys[i]);
-    if (rightAccess >= objectAccess) {
-      var rightActionLevel = parseInt(rights[kind][keys[i]][action]);
-      if (!isNaN(rightActionLevel)) actionLevel = Math.max(actionLevel, rightActionLevel);
-    }
-  }
-  return actionLevel;
-}
-
-  /**
-   * Checks if user has right to perform specified action
-   * @param kind Object kind
-   * @param data Object data(should contin fields "owner" and "access_right").
-   *    Can be null if the action is not for the specific object.
-   * @param action Action
-   * @returns {boolean} True if user has right to perform the action
-   */
-function isAccessRight(kind, data, action) {
-  var access_right = (_.has(data, 'access_right') ? data.access_right : 0);
-  var isOwner = false;
-  if (_.has(data, 'owner')) {
-    isOwner = (data.owner === globalState.userOrganizationCode);
-  }
-  var actionLevel = getActionLevel(globalState.rights, kind, access_right, action);
-  return actionLevel >= 2 || (isOwner && actionLevel >= 1);
-}
-
-function canChangeOwner(kind, data) {
-  var access_right = (_.has(data, 'access_right') ? data.access_right : 0);
-  var actionLevel = getActionLevel(globalState.rights, kind, access_right, "update");
-  return actionLevel >= 2;
-}
-
-function makeFilterFromRestriction(r,data,parent) {
-  var pairs,keyvals,i,el,kval,dval,res=[];
-  if (!r) return [];
-  pairs=r.split("&");
-  for (i=0; i<pairs.length; i++) {
-    keyvals=pairs[i].split("=");
-    if (!keyvals || keyvals.length!=2) continue;
-    //if (keyvals[0]=="main_resource_id") continue;
-    kval=keyvals[1];
-    if (kval.charAt(0)=="{" && kval.charAt(kval.length-1)=="}" && data!=null) {
-      kval=kval.substring(1);
-      kval=kval.substring(0,kval.length-1);
-      dval=data[kval];
-    } else {
-      dval=kval;
-    }
-    el=[keyvals[0],"=",dval];
-    if (el[0]==="main_resource_id" && !el[2] && parent && parent.refkey===el[0] && parent.rowid) {
-      el[2]=parent.rowid;
-    }
-    res.push(el);
-  }
-  return res;
-}
 
 
 // ------------ process data read from api ------------------
@@ -1010,6 +613,10 @@ function isRefType(type) {
   else return false;
 }
 
+function isSearchType(fldtype) {
+  return isRefType(fldtype); 
+}
+
 function isOfType(type) {
   if (!type) return false;
   if (type.indexOf("of:")===0) return true;
@@ -1068,246 +675,6 @@ function isSimpleType(type) {
     }
     return false;
 }
-
-/* -------- modal confirmation and input and wizard -------- */
-
-function modalGetValue(desc,callback) {
-  $("#inputModalDescription").html(desc);
-  $("#inputModal").on('hidden.bs.modal', function (e) {      
-    $('#inputModal').unbind('hidden.bs.modal');    
-    callback($("#inputModalInput").val());
-  })
-  $("#inputModalInput").val("");
-  $("#inputModal").modal('show');
-}
-
-function modalConfirm(desc,callback) {
-  $("#confirmModalDescription").html(desc);
-  $("#confirmModal").on('hidden.bs.modal', function (e) {      
-    $('#confirmModal').unbind('hidden.bs.modal');    
-    callback($("#confirmModalInput").val());
-  })
-  $("#confirmModalInput").val("");
-  $("#confirmModal").modal('show');
-}
-
-function modalWizard(rules,callback) {
-  var show=makeWizardHtml(rules,{});
-  $("#wizardModalDescription").html(show);
-  $("#wizardModal").on('hidden.bs.modal', function (e) {      
-    $('#wizardModal').unbind('hidden.bs.modal');    
-    callback($("#wizardModalInput").val());
-  })
-  //$("#wizardModalInput").val("");
-  $("#wizardModal").modal('show');
-  makeWizardReact();
-}
-
-function makeWizardHtml(rules,prefill) {
-  //console.log(rules);
-  var html,case1,case2,v,v1,v2,tmp;
-  if (prefill===null) {
-    return null;
-  }
-  if (!rules || !_.isArray(rules)) {
-    html="<div class='wizardinner'>";
-    var txt="Jätkamiseks vajuta palun ok: ";
-    txt+=" seepeale avatakse osaliselt eeltäidetud vorm, mille täitmist ";
-    txt+=" tuleb jätkata. Kohustuslikud väljad on märgitud punase tärniga.";
-    txt+=" Osaliselt täidetud vormi saad vahepeal salvestada.";   
-    html+=autolang.trans(txt);
-    //html+="<p>+"+JSON.stringify(prefill)+"<p>";
-    case1='';    
-    prefill.infosystem_status="asutamine_sisestamisel";
-    $("#wizardModalInput").val(JSON.stringify(prefill));
-    html+="<p><button onclick='"+case1+"' class='btn btn-primary btn-sm trans' ";
-    html+=" data-dismiss='modal'>"
-    html+=autolang.trans("ok")+"</button>";    
-    html+="</div>";
-  } else {  
-    if (rules[3]) {
-      prefill=JSON.parse(JSON.stringify(prefill));
-      prefill=_.extend(prefill,rules[3]);
-    }  
-    html="<div class='wizardinner'>";
-    html+=rules[0]+"<p>";
-    //html+=JSON.stringify(prefill);
-    if (rules[2]=="boolean") {
-      v1=JSON.parse(JSON.stringify(prefill));
-      v1[rules[1]]=true;
-      v2=JSON.parse(JSON.stringify(prefill));
-      v2[rules[1]]=false;
-      case1='autoutils.replaceWizardHtml('+JSON.stringify(rules[4])+', ';
-      case1+=JSON.stringify(v1)+')';
-      case2='autoutils.replaceWizardHtml('+JSON.stringify(rules[5])+', ';
-      case2+=JSON.stringify(v2)+')';
-      html+="<button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
-      html+=autolang.trans("yes")+"</button>";
-      html+=" ";
-      html+="<button onclick='"+case2+"' class='btn btn-primary btn-sm trans'>";
-      html+=autolang.trans("no")+"</button>";      
-    } else if (rules[2] && rules[2].startsWith("ref:")) {
-      v1=JSON.stringify(prefill);
-      case1='autoutils.useWizardSelection('+JSON.stringify(rules[1])+', ';
-      case1+=JSON.stringify(rules[4])+', ';
-      case1+=v1+');';
-      html+="<button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
-      html+=autolang.trans("ok")+"</button>";
-      html+="<span id='wizardReactSwitch' style='display: none'>";
-      html+=JSON.stringify([rules[1],rules[2]]);
-      html+="</span>";
-    } else {
-      v1=JSON.stringify(prefill);
-      case1='autoutils.replaceWizardHtml('+JSON.stringify(rules[4])+', ';
-      tmp='autoutils.wizardGetValue('+v1+',"'+rules[1]+'")';
-      case1=case1+tmp+");";
-      html+="<input type='text' class='fldinput' name='"+rules[1]+"'";
-      html+=" id='wizard_"+rules[1]+"' >";
-      html+="<br><button onclick='"+case1+"' class='btn btn-primary btn-sm trans'>";
-      html+=autolang.trans("ok")+"</button>";            
-    }  
-    html+="</div>";
-  }  
-  return html;
-}
-
-
-function tmptst(x) {
-  console.log("tmptst");
-  console.log(x);
-}
-
-function wizardGetValue(prefill,varname) {
-  var tmp,v;
-  v=JSON.parse(JSON.stringify(prefill));
-  tmp=$("#wizard_"+varname).val();
-  if (!tmp) {
-    var err=autolang.trans("Please enter value");
-    $("#wizardModalErr").html(err);
-    return null;
-  }  
-  v[varname]=tmp;
-  return v;
-}
-
-function replaceWizardHtml(rules,prefill) {
-  var show=makeWizardHtml(rules,prefill);
-  var err=autolang.trans("Please enter value");
-  if (show!==null) {
-    $("#wizardModalErr").html("");
-    $("#wizardModalDescription").html(show);  
-    makeWizardReact();
-  } else {
-    $("#wizardModalErr").html(err);
-  }    
-}
-
-var wizardReactElement=null;
-
-function makeWizardReact() {
-  var inputs,viewname,fldname,viewdef;
-  if (document.getElementById('wizardModalReact').innerHtml!=="" &&
-      document.getElementById('wizardReactSwitch') &&
-      $("#wizardReactSwitch").html()!=="") {
-    inputs=$("#wizardReactSwitch").html();
-    inputs=JSON.parse(inputs); 
-    fldname=inputs[0];        
-    viewname=inputs[1];
-    if (!viewname || !viewname.startsWith("ref:")) return;
-    viewname=viewname.substr(4);        
-    console.log(fldname);
-    console.log(viewname);
-    if (wizardReactElement) {
-      ReactDOM.unmountComponentAtNode(document.getElementById('wizardModalReact'));
-      wizardReactElement=null;
-    }          
-    viewdef=_.findWhere(globalState.viewdefs, {"name":viewname});
-    wizardReactElement=React.createElement(autoreact.AutoEditFldSearch,{
-             handleChange:tmptst,             
-             value:"",
-             viewdef:viewdef,
-             name:fldname, 
-             "data-filter": "value",
-             show: "searchfield",       
-             searchValue:""});     
-    ReactDOM.render(wizardReactElement, document.getElementById('wizardModalReact'));
-  } else {
-    if (wizardReactElement) {
-      ReactDOM.unmountComponentAtNode(document.getElementById('wizardModalReact'));
-      wizardReactElement=null;
-    } 
-  }    
-}
-
-function useWizardSelection(mainfld,next,vals) {
-  var rfieldsel,tmp,v;
-  rfieldsel="#wizardModalReact"+" input[name='"+mainfld+"']";
-  tmp=$(rfieldsel).val();
-  if (tmp) {
-    $("#wizard_"+mainfld).val(tmp);
-  }
-  if (!tmp) {
-    var err=autolang.trans("Please enter value");
-    $("#wizardModalErr").html(err);
-    return null;
-  }  
-  v=JSON.parse(JSON.stringify(vals));
-  v[mainfld]=tmp;
-  autoutils.replaceWizardHtml(next,v);
-}
-
-
-/* -------- import -------- */
-
-function showImportModal() {
-  $("#importModalOK").hide();
-  $("#importModalImport").show();
-  $("#importModalCancel").show();
-  $("#importModalResult").html("");
-  $("#importModalValue").val("");
-  $("#importModalFile").val("");
-  $('#importModal').modal('show');
-}
-
-function showImportModalResult(txt) {
-  $("#importModalResult").html(txt);
-  $("#importModalOK").show();
-  $("#importModalImport").hide();
-  $("#importModalCancel").hide();
-}
-
-function sendImportModal() {
-  var val,parsed;
-  val=$("#importModalValue").val();
-  if (!val) {
-    showImportModalResult(autolang.trans("Please select a proper file"));
-    return;
-  }
-  try {
-    parsed=JSON.parse(val);
-  } catch (e) {
-    showImportModalResult(autolang.trans("File does not contain correct json"));
-    return;
-  }  
-  autoapi.postImport(parsed);
-}
-
-function importFileChange(e) {
-  var input=e.target; 
-  if (!input.files || input.files.length<1) return;
-  var file = input.files[0];
-  var filecontent="";        
-  var reader = new FileReader();
-  reader.onload = function(out){
-    importFileChangeFinal(input,input.value,out.target.result);
-  }    
-  reader.readAsText(file);
-}
-  
-function importFileChangeFinal(input,value,result) {
-  $("#importModalValue").val(result);
-  $("#importModalImport").show();
-}  
 
 /* ------- parse uri ------- */
 
@@ -1419,7 +786,13 @@ function copyData(target,source) {
 
 export {
   debug,
-  getListLimit, getListValueLen, getModalHelpLengthLimit, 
+  isTouchDevice,
+  removeAlert,
+
+  makeKey,
+  makeUniqueKey,
+
+  getListLimit, getListValueLen,
 
   userLoggedIn,
   userAllowedEdit,
@@ -1440,16 +813,6 @@ export {
   cloneObject,
   htmlEscape,
 
-  makeFilterParams,
-  getFilterData,
-  makeSaveParams,
-  getStateParamsFilter,
-  formvalueToJson,
-  localDateTimeISO,
-  formatDate,
-  formatDateEnd,
-//  commonPrefix = commonPrefix,
-
   parseUri,
   
   processReadRecord,
@@ -1468,6 +831,7 @@ export {
 
   versionableViewdef,
   isRefType,
+  isSearchType,
   isIdType,
   isArrayType,
   arraySubtype,
@@ -1481,24 +845,11 @@ export {
   getKind,
   getAuthToken,
 
-  modalGetValue,
-  modalConfirm,
-  modalWizard,
-  replaceWizardHtml,
-  wizardGetValue,
-  useWizardSelection,
-
   storeHistory,
   restoreHistory,
   copyData,
 
-  getViewdef,
-  makeFilterFromRestriction,
-
-  calcTestRights,
-  calcRights,
-  isAccessRight,
-  canChangeOwner
+  getViewdef
   
 };
   

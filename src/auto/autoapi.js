@@ -5,6 +5,7 @@
 */
   
 import * as autoutils from './autoutils.js';
+import * as autoformdata from './autoformdata.js';
 import * as autolang from './autolang.js';
 import * as autoapi from './autoapi.js';
 import * as automain from './automain.js';
@@ -336,8 +337,8 @@ var joinArray = function (arr, offset, limit) {
 
 function makeListFilterParams(ctxt,op,viewdef,stateparams) {
   var origforcefilter=stateparams.forcefilter;
-  var filter=autoutils.getStateParamsFilter(stateparams);   
-  var params=autoutils.makeFilterParams(ctxt,op,viewdef);
+  var filter=autoformdata.getStateParamsFilter(stateparams);   
+  var params=autoformdata.makeFilterParams(ctxt,op,viewdef);
   var tmp;
   if (stateparams.preaction=="reset") params["filter"]=[];
   if (filter && params) {    
@@ -349,7 +350,7 @@ function makeListFilterParams(ctxt,op,viewdef,stateparams) {
   if (origforcefilter && !_.isEmpty(origforcefilter)) params.filter=origforcefilter;
   if (!origforcefilter) {
     if (params) stateparams.forcefilter=params.filter;
-    var filterdata=autoutils.getFilterData(ctxt,op,viewdef);
+    var filterdata=autoformdata.getFilterData(ctxt,op,viewdef);
     stateparams.filterdata=filterdata;
     autoutils.storeHistory(ctxt.state,stateparams);
   }  
@@ -493,57 +494,6 @@ function toUrlParams(params) {
 var getListSingle = function(ctxt,op,viewdef,stateparams) {
   //autoutils.debug("calling getCountedListSingle from getListSingle");
   return getCountedListSingle(ctxt,op,viewdef,stateparams);
-  /*
-  var offset=stateparams["offset"];
-  var limit=stateparams["limit"];
-  var sortkey=stateparams["sortkey"];
-  var down=stateparams["down"];  
-  var nextstate;
-  var params=makeListFilterParams(ctxt,op,viewdef,stateparams);
-  //console.log(JSON.stringify(params));
-  if (!params) return;
-  params["op"]="count";
-  var url=getApiUrl(ctxt,viewdef);
-  if (ctxt.props.dummyData) url=url+ctxt.props.countDummyData;  
-  //autoutils.debug("url");
-  //autoutils.debug(url);
-  var timeout=globalState.ajaxTimeout;
-  //if (viewdef && viewdef.name && viewdef.name=="infosystem") timeout=globalState.shortAjaxTimeout;
-  params=convertParams(params);
-  $.ajax({    
-    url: url,
-    dataType: 'json',
-    type: POST,
-    data: JSON.stringify(params),
-    cache: false,
-    timeout: timeout,
-    success: function(data) {    
-      if (isErrResponse(data)) {
-        console.error(url, data.toString());
-        ctxt.simpleUpdateState(
-          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])}));
-      } else if (!data || !_.isObject(data) || !_.has(data,"count")) {
-        console.error(url, data.toString());
-        ctxt.simpleUpdateState(
-          makeListNextState(stateparams,{op:"list", action: null, alert:"danger", alertmessage: autolang.trans("wrong count")}));        
-      } else {                         
-        if (data && data["count"]===0) {
-          autoutils.debug("getList to do ctxt.simpleUpdateState");
-          ctxt.simpleUpdateState(
-            makeListNextState(stateparams,{data: null, op:"list", action: null, count: 0, alert:false}));
-        } else {  
-          //stateparams["count"]=data["ok"];
-          stateparams["count"]=data["count"];
-          nextstate=makeListNextState(stateparams);
-          getPureList(ctxt,op,viewdef,nextstate);              
-        }  
-      }  
-    }.bind(ctxt),
-    error: function(xhr, status, err) {     
-      listError(ctxt,xhr,status,err);   
-    }.bind(ctxt)
-  });
-  */
 }    
 
 // normally we have got a count first; pureList gets data
@@ -747,7 +697,7 @@ function listError(ctxt,xhr,status,err) {
 var saveRecord = function(ctxt,op,viewdef,parent) {
   autoutils.debug("calling saveRecord");
   var httpop, updateExisting, rowid, params; 
-  params=autoutils.makeSaveParams(ctxt,viewdef,parent);
+  params=autoformdata.makeSaveParams(ctxt,viewdef,parent);
   if (!params) {    
     ctxt.simpleUpdateState({op:"edit", action: null, alert:"danger", 
                    alertmessage: autolang.trans("Please fill all fields marked with *")});
