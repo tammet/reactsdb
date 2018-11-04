@@ -8,33 +8,19 @@ import * as autoutils from './autoutils.js';
 import * as autoformdata from './autoformdata.js';
 import * as automodals from './automodals.js';
 import * as autolang from './autolang.js';
-import * as autoapi from './autoapi.js';
 import * as automain from './automain.js';
 import * as autocomp from './autocomp.js';
-import * as autoreact from './autoreact.js';
+import * as autoform from './autoform.js';
+import * as autofldsrch from './autofldsrch.js';
+import * as autofldcmplx from './autofldcmplx.js';
 
 // ====== module start =========
   
 // styling buttons etc, default bootstap
 
 var defaultBtnClass = "btn btn-default btn-sm"; 
-var disabledDefaultBtnClass = "btn btn-default btn-sm disabled";
 var primaryBtnClass = "btn btn-primary btn-sm";  
-var secondaryBtnClass = "btn btn-default btn-sm";  
-var fieldSearchBtnClass = "btn btn-default btn-xs"; 
-var disabledPrimaryBtnClass = "btn btn-primary btn-sm disabled";
-var disabledSecondaryBtnClass = "btn btn-default btn-sm disabled";
 var helpBtnClass = "btn btn-default help";
-
-var alertClass = "alert autoalert";
-var internalAlertClass = "alert autointernalalert";
-var alertClassPrefix = "alert-";
-/*
-var alertSuccessClass= "alert-success";
-var alertInfoClass= "alert-info";
-var alertWarningClass= "alert-danger";
-var alertDangerClass= "alert-danger";  
-*/
 
 // styling tooltip help for hover and click, default autoreact css
   
@@ -46,17 +32,10 @@ var hiddenTipClass = "hiddentip";
 var helpModalContentId = "helpcontents"; // inset help text here
 var helpModalId = "helpModal"; // show this
 
-// images
-
-var sortimage = "img/sort01a.png";
-var sortdownimage = "img/sort02a.png";
-var sortupimage = "img/sort03a.png";
-
 // convenient shorthands
 
 var ce = React.createElement; 
 var trans = autolang.trans; 
-var fldtrans = autolang.fldtrans;
 var langelem = autolang.langelem;
   
 // ===== react components ============  
@@ -77,10 +56,10 @@ class AutoEdit extends React.Component{
   render() {
     var viewdef=this.props.viewdef;
     var datarow=this.props.datarow;     
-    var groups=autoreact.getFormGroups(viewdef,this.props.op);    
+    var groups=autoform.getFormGroups(viewdef,this.props.op);    
     var groupBlocks = [];
     if (!groups) groupBlocks.push(
-          ce(autoreact.AutoHandleFormGroup, {key:autoutils.makeKey("group_edit"), 
+          ce(autoform.AutoHandleFormGroup, {key:autoutils.makeKey("group_edit"), 
                              datarow: datarow, auxdata:this.props.auxdata,
                              viewdef: viewdef, op:this.props.op,
                              group: null, groupname: null,
@@ -90,7 +69,7 @@ class AutoEdit extends React.Component{
     else                            
       for (var i=0; i<groups.length; i++) {
         groupBlocks.push(
-          ce(autoreact.AutoHandleFormGroup, {key:autoutils.makeKey("group_edit"+i), 
+          ce(autoform.AutoHandleFormGroup, {key:autoutils.makeKey("group_edit"+i), 
                              datarow: datarow, auxdata:this.props.auxdata,
                              viewdef: viewdef, op:this.props.op,
                              group: groups[i], groupname: this.props.groupname,
@@ -103,7 +82,7 @@ class AutoEdit extends React.Component{
         ce(automain.AutoAlertMessage,{alert:this.props.alert, alertmessage: this.props.alertmessage, internal:true}),
         ce(AutoEditButtons, {viewdef:this.props.viewdef, rowid:this.props.rowid, callback: this.handleButton}),
         ((groups && viewdef["groupMenu"]!=="left") ? 
-          ce(autoreact.AutoFormGroupMenu, {viewdef:this.props.viewdef, groupname:this.props.groupname,op:this.props.op,
+          ce(autoform.AutoFormGroupMenu, {viewdef:this.props.viewdef, groupname:this.props.groupname,op:this.props.op,
                             callback: this.handleFormGroupButton}) 
            : 
            ""
@@ -329,13 +308,13 @@ class AutoEditFld extends React.Component{
       params["callback"] = this.handleComplexChange;
       params["auxdata"] = this.props.auxdata;
       if (autoid) params.autoid = autoid;
-      raw = ce(AutoEditFldComplex, params);
+      raw = ce(autofldcmplx.AutoEditFldComplex, params);
       // TODO: FIX THIS!
     /*} else if ((!autoutils.isArrayType(fldtype) && !autoutils.isSimpleType(fldtype))) {
       // complex: one object
       params["callback"] = this.handleComplexChange;
       params['single'] = true;
-      raw = ce(AutoEditFldComplex, params);*/
+      raw = ce(autofldcmplxx.AutoEditFldComplex, params);*/
     } else if (fldtype==="base64") {
       var widgetparams={type:"file", className:'btn btn-default btn-xsm', 
                         //value: filename,
@@ -344,7 +323,7 @@ class AutoEditFld extends React.Component{
       if (autoid) widgetparams.id = autoid;                       
       raw=ce("input", widgetparams); 
     } else if (autoutils.isSearchType(fldtype)) {
-      raw=ce(AutoEditFldSearch,{
+      raw=ce(autofldsrch.AutoEditFldSearch,{
              //handleChange:this.handleChange,
              value: autoutils.origRawValue(this.props.name,this.props.datarow), //this.props.value
              viewdef:this.props.viewdef,
@@ -387,352 +366,6 @@ class AutoEditFld extends React.Component{
 };
 
 
-class AutoEditFldSearch extends React.Component{  
-  
-  constructor(props) {
-    super(props);
-    var fldtype;
-    var fld=null;
-    if (this.props.viewdef) fld = _.findWhere(this.props.viewdef.fields, {name:this.props.name});
-    if (this.props.fldtype) {
-      fldtype=this.props.fldtype;
-    } else {
-      fldtype=fld.type;
-    }
-    var kind=getDynamicSearchKind(fldtype);
-    var idfldname=getDynamicSearchIdFieldName(fldtype);
-    var namefldname=getDynamicSearchNameFieldName(fldtype);
-    var searchValue;
-    if (this.props.searchValue) 
-      searchValue=this.props.searchValue;
-    else if (this.props.datarow && this.props.datarow[name+"__joinReplaced"])
-      searchValue=this.props.datarow[name+"__joinReplaced"];
-    else
-      searchValue=autoutils.replaceWithAux(this.props.value, this.props.auxdata, fldtype);
-    //searchValue="names:"+name+","+idfldname+","+namefldname;
-    if (this.props.value && this.props.value===searchValue) searchValue="";
-    this.state = {value:this.props.value, searchValue: searchValue, dynoptions:null,
-            fld:fld, fldtype:fldtype, selindex:null,
-            kind:kind, idfldname:idfldname, namefldname:namefldname};
-    this.handleChange = this.handleChange.bind(this);        
-    this.handleDynamicSearchFieldChange = this.handleDynamicSearchFieldChange.bind(this);         
-    this.handleDynamicOptionsChange = this.handleDynamicOptionsChange.bind(this);         
-    this.handleDynamicOptionsClick = this.handleDynamicOptionsClick.bind(this);        
-  }
-  // called when id field content is changed by user
-  handleChange(e) {   
-    var input=e.target; 
-    autoutils.removeAlert();   
-    this.setState({value:input.value, searchValue: "", dynoptions:null, selindex:null});
-    if (this.props.complexCallback) this.props.complexCallback(input.value); 
-  }
-  // called when search field content is changed by user
-  handleDynamicSearchFieldChange(e) { 
-    var input=e.target;
-    //console.log(" handleDynamicSearchFieldChange changed to: "+input.value)
-    if (autoutils.isSearchType(this.state.fldtype)) {
-      if (!input.value) {
-        if (this.props.show=="searchfield")
-          this.setState({dynoptions: null, value:"", selindex:null});
-        else 
-          this.setState({dynoptions: null, selindex:null});
-      } else {
-        var filter = null;
-        if (_.has(this.state.fld, 'restriction')) {
-          var restriction = this.state.fld.restriction;
-          filter=autoformdata.makeFilterFromRestriction(restriction,this.props.datarow);
-        }
-
-        autoapi.dynamicSearchByName(this,this.state.fldtype,input.value,
-                                  this.state.kind,this.state.idfldname,
-                                  this.state.namefldname, filter);
-      }        
-    }        
-    //console.log("cp2: "+input.value+","+this.state.value);
-    if (input.value=="") this.setState({value:""});
-    this.setState({searchValue:input.value});  
-  }  
-  /*
-  handleKey:function(e) {
-    var index=this.state.selindex;
-    if (index===null) index=3;
-    else if (index<this.state.dynoptions.length-1) index++;
-    console.log("handleKey");
-    console.log(e);
-    this.setState({selindex:index});
-  },
-  */  
-  // callback for the api for dynamic options search      
-  handleDynamicOptionsChange(options) {
-    this.setState({dynoptions: options});
-  }
-  // called when a dynamically built option is clicked
-  handleDynamicOptionsClick(name,value,event) {
-    this.setState({searchValue: name, value:value, dynoptions:null});
-    if (this.props.auxdata) autoutils.addToAux(value, name, this.props.auxdata, this.props.fldtype);
-    if (this.props.complexCallback) this.props.complexCallback(value);
-  }  
-  render() {
-    var fld,params1,params2,val1,val2,raw,outerkey,internal;
-    fld=this.state.fld;
-    val1=this.state.value;
-    if (!val1) val1="";
-    val2=this.state.searchValue;
-    if (!val2) val2="";
-    params1={type:"text",name:this.props.name,className:'fldinput',
-             onChange:this.handleChange,key:name+"_dynfieldsfinal"+this.props.parentName+this.props.arrayIndex,
-             value:val1};      
-    if (this.props.id) params1["id"]=this.props.id; 
-    else if (this.props.autoid) params1["id"]=this.props.autoid;              
-    if (this.props["data-filter"]) params1["data-filter"]=this.props["data-filter"];                   
-    if (!this.props.nosave) params1["data-save"]="value";
-    if (fld && fld["mustFill"]===true) params1["data-mustfill"]="true";                       
-    if (this.props.parentName) params1["data-parentname"]=this.props.parentName;             
-    if (this.props.arrayIndex || this.props.arrayIndex===0) params1["data-arrayindex"]=this.props.arrayIndex;                
-    if (this.props.show=="searchfield") params1["type"]="hidden";         
-    params2={type:"text",className:'fldinput',key:autoutils.makeKey("autosearch"+name),
-             onChange:this.handleDynamicSearchFieldChange,
-             //onKeyDown:this.handleKey, 
-             value:val2};    
-    if (!val2) params2["placeholder"]=trans("name");
-    raw=ce("div",{key:autoutils.makeKey(name+"_dynfieldswrap"+this.props.parentName+this.props.arrayIndex)},
-          ce("div",{className:"nowrap searchfieldiddiv",key:autoutils.makeKey(name+"_dynfieldsinwrap"+this.props.parentName+this.props.arrayIndex)},
-            ce("input",params1),
-            ((this.props.show=="searchfield") ? "" : ce("span",{className: "dynamicSearchLabel"},trans("code")))
-          ),    
-          ce("div",{className:"nowrap searchfieldnamediv"},
-            ce("input",params2),
-            ce("span",{className: "dynamicSearchLabel"},trans("search"))
-          )            
-    );                 
-    outerkey=this.props.parentName+this.props.arrayIndex;            
-    raw=embedFieldDynamicOptions(this,raw,this.state.dynoptions,this.props.name,outerkey,
-                                 this.state.idfldname, this.state.namefldname,this.props.show,
-                                 this.state.selindex);              
-    return raw;        
-  }
-};  
-
-
-function embedFieldDynamicOptions(ctxt,fields,options,name,outerkey,idfldname,namefldname,showtype,selindex) { 
-  var i,val,shownoptions=[],cls;
-  if (!options) options=[];
-  for (i=0; options && i<options.length && i<100; i++) {      
-    val=options[i][namefldname];
-    if (options[i]["eesnimi"]) {
-      val=val+", "+options[i]["eesnimi"];
-    }
-    shownoptions.push(
-      ce("li",{key:autoutils.makeKey(name+"_dynopt"+i), 
-               className:((selindex!==i) ? "dynamicSearchOption" : "dynamicSearchOption dynamicSearchOption_selected"),
-               onClick:ctxt.handleDynamicOptionsClick.bind(
-                          ctxt,
-                          options[i][namefldname],
-                          options[i][idfldname])}, 
-               val)
-    );
-  }      
-  if (showtype=="searchfield") cls="";
-  else cls="outerDynamicSearchBlock";
-  return (
-    ce("div",{className: cls,key:autoutils.makeKey("outersearchfield"+name+outerkey)}, 
-      fields,       
-      ((i>0) ? ce("ul", {className: "dynamicSearchBlock"}, shownoptions) : "")
-    )
-  );
-}  
-
-function getDynamicSearchKind(fldtype) {
-  return getDynamicSearchParamFieldName(fldtype,"object","infosystem");
-}
-
-function getDynamicSearchIdFieldName(fldtype) {
-  if (autoutils.isIdType(fldtype)) return getDynamicSearchParamFieldName(fldtype,"key","main_resource_id");
-  return getDynamicSearchParamFieldName(fldtype,"refField","uri");
-}
-
-function getDynamicSearchNameFieldName(fldtype) {
-  return getDynamicSearchParamFieldName(fldtype,"nameField","name");
-}
-
-function getDynamicSearchParamFieldName(fldtype,viewfld,deflt) {
-  var n,viewname,viewdef;
-  if (!fldtype) return deflt;
-  n=fldtype.lastIndexOf(":");
-  if (n<0) return deflt;
-  viewname=fldtype.substring(n+1);
-  viewdef=_.findWhere(globalState.viewdefs, {"name":viewname});
-  if (!viewdef) return deflt;
-  if (!viewdef[viewfld]) return deflt;
-  return viewdef[viewfld];
-}
-
-
-// edit a complex (non-atomic) field
-
-class AutoEditFldComplex extends React.Component{  
-
-  constructor(props) {
-    super(props);
-    this.handleChange= this.handleChange.bind(this);  
-    this.handleAdd = this.handleAdd.bind(this);  
-    this.handleDelete= this.handleDelete.bind(this);  
-  }
-  handleChange(i,key,v) {
-    autoutils.removeAlert();
-    var val=this.props.value;                       
-    val[i][key]=v;
-  }
-  handleAdd(e) {
-    autoutils.removeAlert();
-    var val=this.props.value;
-    var fld=this.props.field;
-    var type=this.props.datatype;
-    var arraysubtype=autoutils.arraySubtype(type);
-    var subviewdef=getSubtypeViewdef(arraysubtype,val);
-    var fields=getSubtypeViewdefComplexFields(subviewdef);
-    if (!fields) return;    
-    var j,newelem={};
-    for(j=0;j<fields.length;j++) {    
-      newelem[fields[j]["name"]]="";
-    }
-    if (!val) val=[newelem];
-    else val.push(newelem);
-    this.props.callback(val);    
-  }
-  handleDelete(i,e) {
-    autoutils.removeAlert();
-    var j,val,newval;
-    val=this.props.value;
-    newval=[];
-    for(j=0;j<val.length;j++) {
-      if (j===i) continue;
-      newval.push(val[j]);
-    }
-    this.props.callback(newval);        
-  }
-  render() {
-    var i,j,valel,subval,keys,key,fldvalue,editfld,viewdef,label,tmp=[],outerrows=[];    
-    var val=this.props.value;
-    if (this.props.single) {
-      val = [val];
-    }
-    var fld=this.props.field;
-    var type=this.props.datatype;
-    var arraysubtype=autoutils.arraySubtype(type);
-    var subviewdef=getSubtypeViewdef(arraysubtype,val);  
-    var subflds=autoutils.orderFields(subviewdef.fields);      
-    if (val===null) {
-      //autoutils.debug("AutoEditFldComplex render null value");
-      //autoutils.debug(val);
-      //autoutils.debug(fld);
-      //autoutils.debug(type);
-      val=[];
-    }
-    for(i=0;i<val.length;i++) {
-      valel=val[i];
-      //keys=_.keys(valel);
-      //keys=_.map(subviewdef.fields, function(x){ return x["name"]; });
-      keys=_.map(subflds, function(x){ return x["name"]; });
-      tmp=[];            
-      for(j=0; j<keys.length; j++) {        
-        key=keys[j];
-        subval=valel[key];        
-        label=fieldLabel(_.findWhere(subflds,{"name":key}));
-        fld=ce(AutoEditFld, {key: autoutils.makeUniqueKey("complex"), //autoutils.makeKey("complex"+key+i+"_"+j),
-                             name:key, 
-                             fieldlabel:label,
-                             rowid:12341234, 
-                             value:subval, 
-                             viewdef:subviewdef,
-                             parentName: this.props.name,
-                             arrayIndex: i,          
-                             complexCallback:this.handleChange.bind(this,i,key),
-                             callback:this.handleChange.bind(this,i,key),
-                             auxdata: this.props.auxdata})
-        tmp.push(        
-              ce("tr",{key:autoutils.makeKey("complex_tr_"+key+i+"_"+j)},
-                ce("td",{className: "autoEditTableKey"}, label),
-                ce("td",{}, fld)
-              )
-        );   
-      }
-      tmp=ce("tr",{key: autoutils.makeUniqueKey("complex_tr")}, //key:autoutils.makeKey("complex_xtr_"+this.props.field["name"]+i)},         
-            ce("td",{className: "autoValTd"},
-              ce("table",{className: "autoValTable"}, ce("tbody",{},tmp))
-            ),
-            ce("td",{className: "autoValCrossTd"},
-              (this.props.single ? '' : ce("button",{className: "btn btn-default btn-xs", "aria-label": "delete",
-                           onClick: this.handleDelete.bind(this,i)},                                            
-                ce("span", {className:"glyphicon glyphicon-remove lightGlyphicon", "aria-hidden":"true"})
-              ))
-            )
-      );               
-      outerrows.push(tmp);      
-    }
-    if (_.isEmpty(outerrows)) {
-      return (
-        ce("div",{},
-          ce("input", {type:"hidden",name:this.props.name, "data-save":"empty"}),
-          ce("button",{className: "btn btn-default btn-sm btn_add_element",
-                      onClick: this.handleAdd},trans("add element")) )              
-      );
-    }
-    tmp=ce("tr",{key: autoutils.makeUniqueKey("complex")}, //{key:autoutils.makeKey("complex_toptr"+fld["name"])},         
-            ce("td",{colSpan:2, className:"autoValAddTd"},
-                (this.props.single ? '' : ce("button",{className: "btn btn-default btn-sm btn_add_element",
-                            onClick: this.handleAdd},trans("add element")))
-            )
-    ); 
-    outerrows.push(tmp);                            
-    return (
-     ce("table",{className: "autoInnerEditTable"}, 
-        ce("tbody",{},outerrows)  )
-    );             
-  }     
-};      
-
-// find a viewdef for a complex (non-atomic) field
-
-function getSubtypeViewdef(name,val) {
-  var subviewdef=_.findWhere(globalState.viewdefs, {"name":name}); 
-  if (!subviewdef) subviewdef=_.findWhere(globalState.viewdefs, {"object":name});     
-  if (!subviewdef) {
-    var flds=[],valel,i,j,keys,key,type,keyval;
-    for(i=0;i<val.length;i++) {
-      valel=val[i];
-      keys=_.keys(valel);
-      for(j=0; j<keys.length; j++) {
-        key=keys[j];
-        if (_.findWhere(flds,{"name":key})) continue;
-        if (valel[key]!==null) keyval=valel[key];
-        if (keyval==null) type="string";        
-        else if (_.isBoolean(keyval)) type="boolean";
-        else if (_.isString(keyval) && 	keyval.length=="2008-06-10T18:18:27".length &&
-                 keyval[4]=="-" && keyval[7]=="-" && keyval[10]=="T") type="date";
-        else type="string";
-        flds.push({"name": key, "type":type});
-      }        
-    }
-    subviewdef={"name":"builtdummy","fields":flds};
-  }
-  return subviewdef;
-}  
-
-// return fields of a viewdef for a complex (non-atomic) field
-
-function getSubtypeViewdefComplexFields(subviewdef) {
-  if (!subviewdef ||
-      !_.has(subviewdef,"fields") || 
-      !_.isArray(subviewdef["fields"]) ||
-      subviewdef["fields"].length<1 ||
-      !_.isObject(subviewdef["fields"][0]) ||
-      _.isArray(subviewdef["fields"][0]) )
-      return null;
-  return subviewdef["fields"];
-}
-
-
 class AutoEditFldStringArray extends React.Component{  
 
   constructor(props) {
@@ -767,8 +400,7 @@ class AutoEditFldStringArray extends React.Component{
     var isSearchSubtype = autoutils.isSearchType(arraysubtype);
     if (val) {    
       for(i=0;i<val.length;i++) {
-        if (isSearchSubtype) modval=autoutils.replaceWithAux(val[i],this.props.auxdata,arraysubtype,"value");
-        else modval=val[i];
+        modval=val[i];
         if (_.isObject(modval)) continue;
         row=ce("div",{key:autoutils.makeKey("complex_carr"+i), className: "autoSimpleArrayRow"},         
               ce("div",{className: "autoSimpleArrayValue"}, modval),
@@ -784,7 +416,7 @@ class AutoEditFldStringArray extends React.Component{
     }      
     var enterblock;
     if (isSearchSubtype) {
-      enterblock=ce(AutoEditFldSearch,{           
+      enterblock=ce(autofldsrch.AutoEditFldSearch,{           
              value:"",
              fldtype:arraysubtype,
              id: this.props.name+"__addelfld",
@@ -1028,7 +660,6 @@ export {
   AutoEdit,
   AutoEditButtons,
   AutoEditFld,
-  AutoEditFldSearch,
   AutoEditFldBoolean,
   AutoEditFldOption,
   AutoEditFldMultiple,

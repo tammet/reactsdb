@@ -6,7 +6,7 @@
   
 
 import * as autolang from './autolang.js';
-import * as autoreact from './autoreact.js';
+
 
 // ====== module start =========
 
@@ -171,7 +171,7 @@ function makeWizardReact() {
       wizardReactElement=null;
     }          
     viewdef=_.findWhere(globalState.viewdefs, {"name":viewname});
-    wizardReactElement=React.createElement(autoedit.AutoEditFldSearch,{
+    wizardReactElement=React.createElement(autofldsrch.AutoEditFldSearch,{
              handleChange:tmptst,             
              value:"",
              viewdef:viewdef,

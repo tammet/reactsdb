@@ -6,8 +6,7 @@
   
 
 import * as autoutils from './autoutils.js';
-import * as autolang from './autolang.js';
-import * as autoreact from './autoreact.js';
+
 
 // ====== module start =========
 
@@ -58,9 +57,7 @@ function makeFilterParams(ctxt,op,viewdef) {
       if (_.isArray(value)) cond=[name,"?&",value];      
       else cond=[name,"?&",[value]]; 
     } else if (fieldtype && fieldtype.startsWith("array:ref:")) {
-      if (_.isArray(value)) cond=[name,"?&",value];                  
-      //"[\"urn:fdc:riha.eesti.ee:2016:area:519048\"]"]]
-      //else cond=[name,"?&",[value]];      
+      if (_.isArray(value)) cond=[name,"?&",value];                        
       else cond=[name,"?&",JSON.stringify([value])];
     } else {    
       cond=[name,"=",value];
@@ -158,7 +155,7 @@ function makeSaveParams(ctxt,viewdef,parent) {
   for(i=0;i<valueInputs.length;i++) {
     input=valueInputs[i];
     name=input["name"];
-    console.log(name);
+    //console.log(name);
     if (name.indexOf(".")>0) continue; 
     type=input.getAttribute("data-type");
     encoding=input.getAttribute("data-encoding");    
@@ -206,28 +203,6 @@ function makeSaveParams(ctxt,viewdef,parent) {
     key=keys[i];
     save[key]=complexes[key];
   }
-  /*
-  if (ctxt.state.rowid) args["key"]=ctxt.state.rowid;
-  else {
-    // Insertion of the new record. We should set owner field:
-    //if (!save["owner"]) save["owner"]=userOrganizationCode();
-  }
-  */
-  //if (!save["creation_date"]) save["creation_date"]=localDateTimeISO();
-
-  // Apply filters (they contain also parent key assignement):
-  /*
-  if (false) { // (parent && parent.filter) {
-    var filter = parent.filter;
-    for (var i = 0; i < filter.length; i++) {
-      if (filter[i][1] === "=") {
-        save[filter[i][0]] = filter[i][2];
-      }
-    }
-  } else {
-    // No parent. We should set "owner" field, if this is not update:
-  }
-  */
   args["data"]=save;
   if (!filledok) return false;
   return args;  
@@ -256,14 +231,6 @@ function formatDateEnd(start,end) {
   }
 }
 
-/*
-function commonPrefix(array) {
-  var A=array.concat().sort(), 
-      a1=A[0], a2=A[A.length-1], L=a1.length, i=0;
-  while(i<L && a1.charAt(i)===a2.charAt(i)) i++;
-  return a1.substring(0,i);
-}
-*/
 
 function pad0(num) {
   var norm = Math.abs(Math.floor(num));
@@ -348,11 +315,7 @@ export {
   makeSaveParams,
   getStateParamsFilter,
   formvalueToJson,
-
-  //localDateTimeISO,
   formatDate,
-  //formatDateEnd,
-
   makeFilterFromRestriction
   
 };

@@ -7,10 +7,6 @@
 import * as autoutils from './autoutils.js';
 import * as autoformdata from './autoformdata.js';
 import * as autolang from './autolang.js';
-import * as autoapi from './autoapi.js';
-import * as automain from './automain.js';
-import * as autoreact from './autoreact.js';
-
 
 // ====== module start =========
 
@@ -393,16 +389,18 @@ function makeListNextState(oldstate,changes) {
 
 var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
   autoutils.debug("calling getCountedListSingle");
-  var auxDataNeed,tmp,key,nextstate;
+  var tmp,key,nextstate;
   var offset=stateparams["offset"];
   var limit=stateparams["limit"];
   var sortkey=stateparams["sortkey"];
   var down=stateparams["down"];  
   var count=0;
   var params=makeListFilterParams(ctxt,op,viewdef,stateparams);
+  /*
   console.log("params0:");
   console.log(params);   
   console.log(stateparams);  
+  */
   if (!params) return;
   var joinstr=autoutils.makeListJoinParams(ctxt,op,viewdef,stateparams);
   if (joinstr) params["join"]=joinstr;
@@ -416,8 +414,10 @@ var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
   var url=getApiUrl(ctxt,viewdef)+"/"+params.path; 
   console.log("url:"+url);
   if (ctxt.props.dummyData) url=url+ctxt.props.listDummyData;   
+  /*
   console.log("params:");
   console.log(params); 
+  */
   //if (params.table) url=url+"/"+params.table;
   params=convertParams(params);
   var urlparams=toUrlParams(params);
@@ -459,17 +459,10 @@ var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
               if (data[i]["duration"]=="00:00:00") data[i]["duration"]="";
             }
           } 
-          data=autoutils.replaceWithJoin(viewdef,joinstr,data);
-          auxDataNeed=[]; //autoutils.auxDataNeed(data,viewdef,{});          
+          data=autoutils.replaceWithJoin(viewdef,joinstr,data);                   
           nextstate=makeListNextState(stateparams,
              {data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit});                   
-          if (!_.isEmpty(auxDataNeed)) {
-            autoutils.debug("getPureList to do getAuxData");
-            getAuxData(ctxt,url,auxDataNeed,nextstate); 
-          } else {
-            //autoutils.debug("getPureList to do ctxt.simpleUpdateState");                        
-            ctxt.simpleUpdateState(nextstate);
-          }  
+          ctxt.simpleUpdateState(nextstate);         
         }        
       }  
     }.bind(ctxt),
@@ -497,12 +490,11 @@ var getListSingle = function(ctxt,op,viewdef,stateparams) {
 }    
 
 // normally we have got a count first; pureList gets data
-// then call getAuxData (if necessary) to translate codes to names
 
 var getPureList = function(ctxt,op,viewdef,stateparams) {
   //autoutils.debug("calling getPureList with stateparams['count'] "+stateparams['count']);
   //console.log(stateparams.filterdata);
-  var auxDataNeed,tmp,key,nextstate;
+  var tmp,key,nextstate;
   var offset=stateparams["offset"];
   var limit=stateparams["limit"];
   var sortkey=stateparams["sortkey"];
@@ -553,18 +545,10 @@ var getPureList = function(ctxt,op,viewdef,stateparams) {
               if (data[i]["duration"]=="00:00") data[i]["duration"]="";
             }
             //data=tmp;
-          } 
-          
-          auxDataNeed=autoutils.auxDataNeed(data,viewdef,{});          
+          }                 
           nextstate=makeListNextState(stateparams,
              {data: data, op:"list", action: null, count: count, alert:false, offset:offset, limit:limit});                   
-          if (!_.isEmpty(auxDataNeed)) {
-            autoutils.debug("getPureList to do getAuxData");
-            getAuxData(ctxt,url,auxDataNeed,nextstate); 
-          } else {
-            //autoutils.debug("getPureList to do ctxt.simpleUpdateState");                        
-            ctxt.simpleUpdateState(nextstate);
-          }  
+          ctxt.simpleUpdateState(nextstate);
         }        
       }  
     }.bind(ctxt),
@@ -574,47 +558,11 @@ var getPureList = function(ctxt,op,viewdef,stateparams) {
   });
 }    
 
-// get data to translate codes to names
 
-var getAuxData = function(ctxt,url,need,statepart,future) {
-  autoutils.debug("calling getAuxData");
-  var args;
-  args={"op":"list",
-        "table":_.keys(need)[0],
-        "fields":"name",
-        "filter":"id,=,"+need[_.keys(need)[0]],
-        "token":autoutils.getAuthToken()};
-  $.ajax({    
-    url: url,
-    dataType: 'json',
-    type: POST,
-    data: JSON.stringify(args),   
-    cache: false,
-    timeout: globalState.ajaxTimeout,
-    success: function(data) {    
-      if (isErrResponse(data)) {
-        console.error(url, data.toString());
-        ctxt.simpleUpdateState({op:"list", action: null, alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
-      } else {
-        statepart["auxdata"]=data;        
-        if (future && future.alert) {
-          statepart.alert=future.alert;
-          statepart.alertmessage=future.alertmessage;
-        } 
-        statepart.data=autoutils.processReadRecord(statepart.data,statepart.viewdef,data); 
-        ctxt.simpleUpdateState(statepart);        
-      }        
-    }.bind(ctxt),
-    error: function(xhr, status, err) {
-      listError(ctxt,xhr,status,err);
-    }.bind(ctxt)
-  });
-}    
-
-// get a single record, then call getAuxData
+// get a single record
 
 var getRecord = function(ctxt,op,viewdef,id,future) {
-  var auxDataNeed,statepart;
+  var statepart;
   autoutils.debug("calling getRecord with id "+id);
   // Special handling for templates with "list_templates" element:
   if (_.has(viewdef, 'list_templates')) {
@@ -647,22 +595,13 @@ var getRecord = function(ctxt,op,viewdef,id,future) {
       } else {  
         //if (_.isArray(data) && !_.isEmpty(data)) data=data[0];        
         if (data && data.resource) data=data.resource;
-        data=autoutils.replaceWithJoin(viewdef,joinstr,data,op);
-        auxDataNeed=[]; //autoutils.auxDataNeed(data,viewdef,{});  
+        data=autoutils.replaceWithJoin(viewdef,joinstr,data,op);  
         statepart={data: data, op:"view", viewdef:viewdef, action:null, alert:false};
         if (future && future.alert) {
           statepart.alert=future.alert;
           statepart.alertmessage=future.alertmessage;
-        }                              
-        if (!_.isEmpty(auxDataNeed)) {
-          //autoutils.debug("getRecord to do getAuxData");
-          //autoutils.debug(future);
-          getAuxData(ctxt,url,auxDataNeed,statepart,future); 
-        } else {
-          //autoutils.debug("getRecord to do ctxt.simpleUpdateState");
-          statepart.data=autoutils.processReadRecord(statepart.data,viewdef);    
-          ctxt.simpleUpdateState(statepart);
         }         
+        ctxt.simpleUpdateState(statepart);           
       }        
     }.bind(ctxt),
     error: function(xhr, status, err) {
@@ -769,16 +708,7 @@ var saveRecord = function(ctxt,op,viewdef,parent) {
             console.log("keyname, data[keyname]: "+keyname+" "+data[keyname]);
 
             ctxt.updateState({op:"edit", action: null, data:[data], alert:"success", 
-                            alertmessage:autolang.trans("Saved")});
-            /*                 
-            if (!ctxt.state.parent) {  
-              ctxt.updateState({op:"view",rowid:data[keyname],action:null,
-                           alert:"success", alertmessage:autolang.trans("Saved")});   
-            } else {
-              ctxt.simpleUpdateState({op:"edit",rowid:data[keyname],action:null,data:[newdata],
-                           alert:"success", alertmessage:autolang.trans("Saved")});
-            } 
-            */                      
+                            alertmessage:autolang.trans("Saved")});                    
           }                           
         }           
       }    
@@ -841,16 +771,7 @@ var deleteRecord = function(ctxt,op,viewdef,id,parent) {
       
       alertmessage="deleting failed";
       var statepart={op:"view", action:null, alert:"danger", alertmessage:alertmessage};
-      ctxt.simpleUpdateState(statepart);   
-
-      /* 
-      ctxt.updateState({op:"edit", action: null, alert:"danger", parent:parent,
-        alertmessage: autolang.trans("Error deleting")});  
-      */  
-      /*  
-      ctxt.updateState({op:"list", action: "fresh", alert:"danger",  parent:parent,
-                      alertmessage: alertmessage});
-      */                
+      ctxt.simpleUpdateState(statepart);                 
     }.bind(ctxt)
   });
 }  

@@ -6,7 +6,7 @@
   
 
 import * as autolang from './autolang.js';
-import * as autoreact from './autoreact.js';
+
 
 // ====== module start =========
 
@@ -312,155 +312,6 @@ function processReadRecord(data,viewdef,auxdata) {
     res[key]=conv;
   }
   return res;
-}
-
-// ------------ auxiliary data ------------------
-
-// determine aux data needed
-
-function auxDataNeed(data,viewdef,currentAuxData) {
-  var fields,part,i,j,keys,key,val,fld,type,subtype,subviewdef;
-  debug("calling auxDataNeed");
-  console.log(data);
-  console.log(viewdef);
-  console.log(currentAuxData);
-  if (!data) return null;
-  fields=viewdef.fields;
-  if (_.isArray(data)) {
-    part=currentAuxData;
-    for(i=0;i<data.length;i++) {      
-      part=auxDataNeed(data[i],viewdef,part); 
-    }
-    console.log("auxDataNeed res for isArray");
-    console.log(part);
-    return part;
-  }  
-  else if (_.isObject(data)) {
-    keys=_.keys(data);
-    part=currentAuxData;    
-    for(i=0;i<keys.length;i++) {      
-      key=keys[i];
-      val=data[key];
-      if (!val) continue;
-      fld=_.findWhere(fields, {name:key});
-      if (!fld) continue;
-      type=fld.type;
-      subtype=arraySubtype(type);
-      console.log("fld, key, type, subtype, val");
-      console.log(fld);
-      console.log(key);
-      console.log(type);
-      console.log(subtype);
-      console.log(val);      
-      if (subtype && _.isArray(val)) {
-        if (isRefType(subtype)) {        
-          for(j=0;j<val.length;j++) {      
-            part=auxDataNeedSingle(val[j],subtype,part); 
-          }
-        } else  {
-          subviewdef=_.findWhere(globalState.viewdefs, {"name":subtype});
-          if (subviewdef) {
-            part=auxDataNeed(val,subviewdef,part);          
-          }  
-        }  
-      } else {
-        part=auxDataNeedSingle(val,type,part)
-      }
-    }
-    console.log("auxDataNeed res for isObject");
-    console.log(part);
-    return part;
-  }
-  return {};  
-}
-
-function auxDataNeedSingle(val,type,part) {
-  /*
-  console.log("auxDataNeedSingle");
-  console.log(val);
-  console.log(type);
-  console.log(part);
-  */
-  if (val === undefined || val === null || val === "" || val === 0) return part;
-  if (isRefType(type)) {
-    var tname=refSubtype(type);
-    if (!part[tname]) part[tname]=[val];
-    else if (part[tname].indexOf(val)<0) part[tname].push(val);
-  }  
-  //console.log(part);
-  return part;  
-}
-
-// create an enhanced copy of the data element, using auxiliary data
-
-function replaceWithAux(val,auxdata,type,replacestyle) {
-  /*
-  debug("replaceWithAux");
-  debug(val);
-  debug(type);
-  debug(auxdata);
-  */
-  var lst,tmp,subtype,subviewdef;  
-  if (!val || !auxdata || !type) return val;  
-  if (_.isArray(val) && !_.isEmpty(val)) {
-    subtype=arraySubtype(type); 
-    //debug("type: "+type);   
-    //debug("subtype: "+subtype);    
-    if (!subtype || subtype=="string") return val;    
-    if (isRefType(subtype)) {
-      return _.map(val,function(el) {
-        return replaceWithAux(el,auxdata,subtype,replacestyle);
-      });
-    } else  {
-      subviewdef=_.findWhere(globalState.viewdefs, {"name":subtype});
-      //debug("subviewdef: ");  
-      //debug(subviewdef);      
-      if (!subviewdef) return val;
-      return _.map(val,function(el) {
-        return replaceWithAuxObject(el,auxdata,subviewdef,replacestyle);
-      }); 
-    }  
-  } else {
-    var auxType = getAuxDataType(type);
-    if (auxType === null) return val;
-    lst = auxdata[auxType];
-  }
-  if (!lst || !lst[val]) return val;  
-  else if (type=="ref:person") return lst[val];
-  else if (replacestyle=="both") return lst[val]+" ("+val+")";
-  else return lst[val];  
-}
-
-function addToAux(val, replacement, auxdata, type) {
-  if (val === undefined || val === null || val === "" || replacement === undefined || replacement === null || replacement === "") return;
-  var auxType = getAuxDataType(type);
-  if (!_.has(auxdata, auxType)) auxdata[auxType] = {};
-  auxdata[auxType][val] = replacement;
-}
-
-function getAuxDataType(type) {
-  if (!type) return null;
-  if (!type.startsWith("ref:")) return null;
-  switch (type) {
-    case 'ref:person':
-      return 'persons';
-    case 'ref:organization':
-      return 'organizations';
-    default:
-      return 'uris';
-  }
-}
-
-function replaceWithAuxObject(obj,auxdata,viewdef,replacestyle) {
-  var i,res={},keys=_.keys(obj),key,fld,conv;  
-  for(i=0;i<keys.length;i++) {
-    key=keys[i];    
-    fld=_.findWhere(viewdef.fields, {name:key});
-    if (!fld) conv=obj[key];
-    else conv=replaceWithAux(obj[key],auxdata,fld.type,replacestyle);
-    res[key]=conv;
-  }
-  return res;  
 }
 
 // ------------- creating and using joins ------------------------------
@@ -816,10 +667,6 @@ export {
   parseUri,
   
   processReadRecord,
-
-  auxDataNeed,
-  replaceWithAux,
-  addToAux,
 
   makeListJoinParams,
   replaceWithJoin,

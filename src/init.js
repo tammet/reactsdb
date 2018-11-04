@@ -6,8 +6,6 @@
 
 import * as autoutils from './auto/autoutils.js';
 import * as autolang from './auto/autolang.js';
-import * as autoapi from './auto/autoapi.js';
-import * as autoreact from './auto/autoreact.js';
 import * as automain from './auto/automain.js';
 
 var isTest=true;
@@ -18,7 +16,7 @@ var reactInstance=null;
 
 
 function doLogin(userdata) {
-  console.log("doLogin");
+  //console.log("doLogin");
   //console.log(userdata.fullname);
   $("#body").css("background-image","none");
   $("#body").css("background-color", "#f9f9fb");
@@ -146,7 +144,7 @@ function initReact(state) {
       break;
     }
   }    
-  rootElement = React.createElement(automain.AutoResource, state);
+  rootElement = React.createElement(automain.AutoMain, state);
   reactInstance = ReactDOM.render(rootElement, document.getElementById('react-app'));
 }  
 

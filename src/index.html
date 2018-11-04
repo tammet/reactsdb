@@ -17,6 +17,8 @@
 
 <title id="title">reactsdb</title>
 
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
 <link rel="stylesheet" type="text/css" href="css/datepicker.css">
 <link rel="stylesheet" type="text/css" href="css/auto.css">
@@ -352,8 +354,8 @@ body {
 <script src="react/react.development.js"></script>
 <script src="react/react-dom.development.js"></script>
 
+<script src="auto/autodatepicker.js"></script>
 
-<script src="utils/bootstrap-datepicker.js"></script>
 
 <!-- autoreact viewdefs -->
 
@@ -368,8 +370,15 @@ body {
 <script type="module" src="auto/autoapi.js"></script>
 <script type="module" src="auto/autocomp.js"></script>
 <script type="module" src="auto/automain.js"></script>
-<script type="module" src="auto/autoreact.js"></script>
+<script type="module" src="auto/automenu.js"></script>
+<script type="module" src="auto/autolist.js"></script>
+<script type="module" src="auto/autoform.js"></script>
+<script type="module" src="auto/autoview.js"></script>
 <script type="module" src="auto/autoedit.js"></script>
+<script type="module" src="auto/autofldsrch.js"></script>
+<script type="module" src="auto/autofldcmplx.js"></script>
+
+
 
 <!-- data, main funs, top level and finally init -->
 
@@ -379,6 +388,8 @@ body {
 <script type="module">
 import * as autoapi from './auto/autoapi.js';
 import * as init from './init.js';
+
+console.log("page0");
 
 document.getElementById("loginbutton").addEventListener("click", 
   function() {
@@ -396,6 +407,7 @@ document.getElementById("menudata").addEventListener("click",
 document.getElementById("menulogout").addEventListener("click", 
   function() { init.menuLogOut(); return false }    
 );
+console.log("page1");
 </script> 
 
 

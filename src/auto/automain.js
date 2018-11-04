@@ -5,12 +5,14 @@
 */
 
 import * as autoutils from './autoutils.js';
-import * as autoformdata from './autoformdata.js';
 import * as autolang from './autolang.js';
 import * as autoapi from './autoapi.js';
-import * as autoreact from './autoreact.js';
-import * as autocomp from './autocomp.js';
+import * as autolist from './autolist.js';
+import * as autoform from './autoform.js';
+import * as autoview from './autoview.js';
 import * as autoedit from './autoedit.js';
+import * as automenu from './automenu.js';
+
 
 // ====== module start =========
   
@@ -19,20 +21,18 @@ import * as autoedit from './autoedit.js';
 var ce = React.createElement; 
 var trans = autolang.trans; 
 var fldtrans = autolang.fldtrans;
-var langelem = autolang.langelem;  
-   
   
 // ===== react components ============   
 
   
 // --- top level ----
 
-/* call AutoResource like React.createElement(autoreact.AutoResource, props)
+/* call AutoMain like React.createElement(autoreact.AutoMain, props)
    where props is globalState; see init.js 
 */
 
 
-class AutoResource extends React.Component{
+class AutoMain extends React.Component{
  
   constructor(props) {
     super(props);
@@ -53,7 +53,7 @@ class AutoResource extends React.Component{
   prepareState(input) { 
     autoutils.debug("prepareState with input");
     var viewdef=_.findWhere(input.viewdefs, {name:input.viewname});   
-    var groups=autoreact.getFormGroups(viewdef,"view"); // default prepare groups for view
+    var groups=autoform.getFormGroups(viewdef,"view"); // default prepare groups for view
     var groupname=null;
     if (groups) {
       if (input.groupname) groupname=input.groupname;
@@ -70,21 +70,21 @@ class AutoResource extends React.Component{
            viewallfields:input.viewallfields,
            offset: offset, sort:true, sortkey:sortkey, down: down, filter:input.filter,
            forcefilter:input.forcefilter, filterdata:input.filterdata,    
-           refkey: input.refkey, prefill:null,                   
+           prefill:null,                   
            simplemenuselectname: null, alert: false, alertmessage: ""};
   }
   
-  // normally we call updateState, not simpleUpdateState (we do not directly call AutoResource.setState)
+  // normally we call updateState, not simpleUpdateState (we do not directly call AutoMain.setState)
   
   simpleUpdateState(statechange) {
     
     this.setState(statechange);
   }
   
-  // normally we call updateState (we do not directly call AutoResource.setState)
+  // normally we call updateState (we do not directly call AutoMain.setState)
   
   updateState(statechange)  { // {op:.., action: ... rowid:..., group:...,)    
-    var tmpstate,filter,refkey,stateprams,useViewdef,tmpdata,isParentView=false,tst=false,wait=false,viewdef;
+    var tmpstate,filter,stateprams,useViewdef,tmpdata,isParentView=false,tst=false,wait=false,viewdef;
 
     
     // ------ showing all or only filled fields ----
@@ -130,7 +130,7 @@ class AutoResource extends React.Component{
       stateparams={"op":"list","action":"sort","viewdef":viewdef, "preaction":"reset",
                     "simplemenuselectname":statechange.simplemenuselectname,
                     "menuselectname":statechange.simplemenuselectname,
-                    "offset":0, "limit":autoreact.getLocalListLimit(viewdef),
+                    "offset":0, "limit":autolist.getLocalListLimit(viewdef),
                     "sortkey":"id","down":true, "parent":null}; 
       //autoutils.debug(statechange.simplemenuselectname); 
       if (_.indexOf(["wearables","web","longpoll","cron","disk","processes"],mname)>=0) {        
@@ -191,19 +191,18 @@ class AutoResource extends React.Component{
       // local stuff
       filter=statechange.filter;
       //autoutils.debug("filter cp1");
-      //autoutils.debug(filter);
-      refkey=statechange.refkey;
+      //autoutils.debug(filter);     
       var viewmenu=statechange.viewmenu;
       statechange=this.prepareState(globalState);
       if (viewmenu) statechange.viewmenu=viewmenu;
       else statechange.viewmenu=null;      
       if (!this.state.parent) { 
         statechange.parent={"viewdef":this.state.viewdef, 
-                           "filter": filter, "refkey": refkey,
+                           "filter": filter,
                             "data":this.state.data, "rowid": this.state.rowid};    
       }               
       statechange.offset=0;
-      statechange.limit=autoreact.getLocalListLimit(statechange.viewdef);
+      statechange.limit=autolist.getLocalListLimit(statechange.viewdef);
       statechange.sortkey="name";
       statechange.down=true;
       statechange.filter=filter;
@@ -226,7 +225,7 @@ class AutoResource extends React.Component{
       statechange.offset=0;
       //wait=true;
       stateparams={"offset":statechange.offset, //limit: 20,
-                   "limit":autoreact.getLocalListLimit(this.props.viewdef),
+                   "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":statechange.sortkey,"down":statechange.down, "parent":null,
                    "preaction":"reset",
                    "action":"search"};                     
@@ -234,43 +233,43 @@ class AutoResource extends React.Component{
     } else if (statechange.op==="list" && (statechange.action==="search" || statechange.action==="fresh")) {      
       statechange.offset=0;
       //wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down, "parent":this.state.parent};  
       autoapi.getList(this,"get",this.state.viewdef,stateparams);
     } else if (statechange.op==="list" && statechange.action==="sort") { 
       statechange.offset=0; 
       //wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":statechange.sortkey,"down":statechange.down, "parent":this.state.parent};                   
       //autoutils.debug("about to call getlist");                  
       autoapi.getList(this,"get",this.state.viewdef,stateparams); 
       this.state.op="wait";                   
     } else if (statechange.op==="list" && statechange.action==="next") {      
-      statechange.offset=this.state.offset + autoreact.getLocalListLimit(this.props.viewdef);
-      if (statechange.offset>=this.state.count) statechange.offset=this.state.count-autoreact.getLocalListLimit(this.props.viewdef);
+      statechange.offset=this.state.offset + autolist.getLocalListLimit(this.props.viewdef);
+      if (statechange.offset>=this.state.count) statechange.offset=this.state.count-autolist.getLocalListLimit(this.props.viewdef);
       if (statechange.offset < 0) statechange.offset=0;      
       wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down, "parent":this.state.parent};          
       autoapi.getList(this,"get",this.state.viewdef,stateparams);             
     } else if (statechange.op==="list" && statechange.action==="previous") {      
-      statechange.offset=this.state.offset - autoreact.getLocalListLimit(this.props.viewdef);
+      statechange.offset=this.state.offset - autolist.getLocalListLimit(this.props.viewdef);
       if (statechange.offset < 0) statechange.offset=0;
       wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down, "parent":this.state.parent};
       autoapi.getList(this,"get",this.state.viewdef,stateparams);
      } else if (statechange.op==="list" && statechange.action==="first") {      
       statechange.offset=0;
       wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down, "parent":this.state.parent};
       autoapi.getList(this,"get",this.state.viewdef,stateparams); 
     } else if (statechange.op==="list" && statechange.action==="last") {      
-      statechange.offset=this.state.count-autoreact.getLocalListLimit(this.props.viewdef);
+      statechange.offset=this.state.count-autolist.getLocalListLimit(this.props.viewdef);
       if (statechange.offset < 0) statechange.offset=0;
       wait=true;
-      stateparams={"offset":statechange.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":statechange.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down, "parent":this.state.parent};   
       autoapi.getList(this,"get",this.state.viewdef,stateparams);       
     } else if (statechange.op==="list" && statechange.action==="all") {      
@@ -328,12 +327,12 @@ class AutoResource extends React.Component{
   // --------- loading initial data before mounting ------
   
   componentWillMount() {    
-    //autoutils.debug("autoResource componentWillMount");
+    //autoutils.debug("AutoMain componentWillMount");
     //this.loadDataFromServer();
   }
   
   componentDidMount() {    
-    //autoutils.debug("autoResource componentWillMount");
+    //autoutils.debug("AutoMain componentWillMount");
     console.log("componentDidMount");
     this.loadDataFromServer();
   }
@@ -343,7 +342,7 @@ class AutoResource extends React.Component{
   loadDataFromServer() { 
     var stateparams;
     if (this.state.op==="list") {    
-      stateparams={"offset":this.state.offset, "limit":autoreact.getLocalListLimit(this.props.viewdef),
+      stateparams={"offset":this.state.offset, "limit":autolist.getLocalListLimit(this.props.viewdef),
                    "sortkey":this.state.sortkey,"down":this.state.down,"forcefilter":this.state.forcefilter};
       autoapi.getList(this,"get",this.state.viewdef,stateparams);                   
     } else if (this.state.op==="view") {
@@ -380,7 +379,7 @@ class AutoResource extends React.Component{
   // ---- actual render -----
   
   render() {    
-    //autoutils.debug("AutoResource render");        
+    //autoutils.debug("AutoMain render");        
     //autoutils.debug(this.state.op);  
     //autoutils.debug(this.state.action); 
     //autoutils.debug(this.state.preaction); 
@@ -442,7 +441,7 @@ class AutoResource extends React.Component{
     } else if (this.state.data && !_.isArray(this.state.data)) {  
       label=this.state.data["name"];         
     } else { 
-      label=fldtrans(autoreact.fieldLabel(this.state.viewdef)); //+": "+trans(this.state.op);    
+      label=fldtrans(autoform.fieldLabel(this.state.viewdef)); //+": "+trans(this.state.op);    
     }      
     return(     
       ce("div", {className: "container autoBox"},
@@ -471,7 +470,7 @@ class AutoResource extends React.Component{
         ce("div", {className: "row"},
           ((simplemenu) ?            
             ce("div", {className: "col-md-2 leftMenuCol"},           
-              ce(AutoSimpleMenu, {viewdef: this.state.viewdef,
+              ce(automenu.AutoSimpleMenu, {viewdef: this.state.viewdef,
                                   groupname:this.state.groupname, 
                                   simplemenuselectname:this.state.simplemenuselectname,
                                   menuselectname:this.state.menuselectname,
@@ -485,7 +484,7 @@ class AutoResource extends React.Component{
           ),   
           ((leftmenu) ?            
             ce("div", {className: "col-md-2 leftMenuCol"},           
-              ce(AutoLeftMenu, {viewdef:((this.state.viewmenu) ? 
+              ce(automenu.AutoLeftMenu, {viewdef:((this.state.viewmenu) ? 
                                          _.findWhere(globalState.viewdefs, {name:this.state.viewmenu})
                                          : this.state.viewdef),
                                 groupname:this.state.groupname, 
@@ -505,11 +504,12 @@ class AutoResource extends React.Component{
             ce("div", {className: "innerContainer"},         
               ce("div", {className: "row"},
                 ce("div", {className: ((leftmenu || simplemenu) ? "col-md-12" : "col-md-12")}, 
-                  ce(AutoMain, {
+
+                  ce(AutoMainContent, {
                     //data: this.state.data,                    
                     data: ((!this.state.prefill || (this.state.data && !_.isEmpty(this.state.data))) 
-                           ? this.state.data : 
-                           this.state.prefill),                    
+                          ? this.state.data : 
+                          this.state.prefill),                    
                     auxdata: this.state.auxdata,
                     //prefill: this.state.prefill,
                     viewdef: this.state.viewdef,
@@ -545,10 +545,13 @@ function getObjectLabel(data,viewdef) {
   return label;
 }
 
-//var AutoMain = React.createClass
-class AutoMain extends React.Component{
-  //displayName: 'AutoMain',
+
+class AutoMainContent extends React.Component{
   render() {
+    /*
+    console.log("AutoMain callback:");
+    console.log(this.props.callback);
+    */
     var onepage=false;
     if (!this.props.op || this.props.op=="list" || this.props.op=="wait") { // use list if initial op missing altogether
       //autoutils.debug("size "+this.props.offset+" "+this.props.count+" "+this.props.data.length);
@@ -556,7 +559,7 @@ class AutoMain extends React.Component{
       return (
         ce("div", {className: "autoMain"},
           ((!autoutils.hasNegativeProperty(this.props.viewdef,"filter")) ?        
-            ce(autoreact.AutoListForm, {viewdef: this.props.viewdef, onDataSubmit:this.handleDataSubmit, 
+            ce(autolist.AutoListForm, {viewdef: this.props.viewdef, onDataSubmit:this.handleDataSubmit, 
                              callback:this.props.callback,
                              offset:this.props.offset, data:this.props.data,
                              datarow: this.props.filterdata,
@@ -568,13 +571,13 @@ class AutoMain extends React.Component{
           ((this.props.op=="wait") ?
            ""
            :              
-           ce(autoreact.AutoList, {data: this.props.data, auxdata: this.props.auxdata, viewdef: this.props.viewdef, 
+           ce(autolist.AutoList, {data: this.props.data, auxdata: this.props.auxdata, viewdef: this.props.viewdef, 
                         sort: this.props.sort, sortkey: this.props.sortkey, down: this.props.down,
                         count: this.props.count,
                         op:this.props.op, callback:this.props.callback})
           ),              
           ((onepage) ? "" :                      
-            ce(autoreact.AutoScrollButtons, {viewdef:this.props.viewdef, callback:this.props.callback,
+            ce(autolist.AutoScrollButtons, {viewdef:this.props.viewdef, callback:this.props.callback,
                              count: this.props.count,
                              offset:this.props.offset, data:this.props.data, parent:this.props.parent}))                              
         )  
@@ -582,14 +585,15 @@ class AutoMain extends React.Component{
     } else if (this.props.op=="view") {
       var datarow = this.props.data;
       var viewtitle = "";
+      //console.log("AutoMain view");
       return (
         ce("div", {className: "autoMain"},
-          ce(autoreact.AutoView, {datarow: datarow, auxdata: this.props.auxdata, 
+          ce(autoview.AutoView, {datarow: datarow, auxdata: this.props.auxdata, 
                         viewdef: this.props.viewdef, rowid: this.props.rowid,                         
                         groupname: this.props.groupname, viewtitle:viewtitle,
                         viewallfields:this.props.viewallfields,  
                         alert:this.props.alert,alertmessage: this.props.alertmessage, 
-                        op:this.props.op, callback:this.props.callback, parent:this.props.parent})              
+                        op:this.props.op, callback:this.props.callback, parent:this.props.parent})
         )  
       );
     } else if (this.props.op=="edit" || this.props.op=="add") {
@@ -616,7 +620,7 @@ class AutoMain extends React.Component{
       datarow = this.props.data;
       return (
         ce("div", {className: "autoMain"},
-          ce(autoreact.AutoText, {datarow: datarow, auxdata: this.props.auxdata, 
+          ce(autoview.AutoText, {datarow: datarow, auxdata: this.props.auxdata, 
                         viewdef: this.props.viewdef, rowid: this.props.rowid,                         
                         groupname: this.props.groupname, viewtitle:viewtitle,
                         viewallfields:this.props.viewallfields,  
@@ -631,136 +635,6 @@ class AutoMain extends React.Component{
   }
 };
 
-//var AutoSimpleMenu = React.createClass({
-class AutoSimpleMenu extends React.Component{  
-  //displayName: 'AutoSimpleMenu',
-   handleButton(menuitem,e) {
-    e.preventDefault();
-    var params={"action": "simplemenuselect", simplemenuselectname:menuitem};   
-    this.props.callback(params);
-  }
-  
-  render() { 
-    var viewdef=this.props.viewdef;
-    var menuitems=['users','tabbed users','locations','checkins','sessions'];  
-    if (!menuitems) return "";     
-    var menuitem,menulabel,menuclass;
-    var menuBlocks = [];
-    for (var i=0; i<menuitems.length; i++) {
-      menuitem=menuitems[i];
-      menulabel=menuitem;
-      menuclass="autoleftmenubutton";
-      if (this.props.simplemenuselectname) {
-        if (this.props.simplemenuselectname==menuitem) menuclass+=" autoleftmenubuttonSelected";
-      } else if (i==0) menuclass+=" autoleftmenubuttonSelected";                 
-      if (menuitem=='Server' || menuitem=='Logs' || menuitem=='Data') {
-        menuclass="autoleftmenuseparator";
-        menuBlocks.push(
-          ce("li", {key:i+menulabel, className: menuclass}, menulabel)
-        );    
-      } else {
-        menuBlocks.push(
-          ce("li", {key:i+menulabel, 
-                        className: menuclass,
-                        onClick:this.handleButton.bind
-                          (this,menuitem)}, 
-            ce("a", {href: "#", className: "autoleftmenubuttonlink"},
-                menulabel)
-          )
-        );    
-      }
-    }
-    return (
-      ce("div",{},
-        ce("ul",{className:"autoleftmenu"},
-          menuBlocks
-        )      
-      )  
-    );     
-  }
-};  
-
-
-//var AutoLeftMenu = React.createClass({
-class AutoLeftMenu extends React.Component{  
-  //displayName: 'AutoLeftMenu',
-  handleButton(name,viewmenu,restriction,component,menuselectname,e) {
-    var usedata;
-    e.preventDefault();
-    var params={"action": "menuselect", viewname:name, viewmenu:viewmenu, component:component, menuselectname:menuselectname};
-    var filter;
-    if (this.props.parent && this.props.parent.data && _.isObject(this.props.parent.data))
-      usedata=this.props.parent.data;
-    else 
-      usedata=this.props.data;
-    filter=autoformdata.makeFilterFromRestriction(restriction,usedata);
-    /*
-    autoutils.debug("made filter from restr "+restriction);
-    autoutils.debug(this.props.parent);
-    autoutils.debug(usedata);
-    autoutils.debug(filter);
-    */
-    var refkey;
-    refkey=getRefKeyFromRestriction(restriction);
-    params["filter"]=filter;
-    params["refkey"]=refkey;
-    params["parent"]=this.props.parent;
-    this.props.callback(params);
-  }
-  
-  render() {    
-    var viewdef=this.props.viewdef;
-    var groups=viewdef["menu"];
-    if (!groups) return "";
-    if (this.props.op==="list") return ce("span",{},"");     
-    var group,grouplabel,menuclass;
-    var groupBlocks = [];
-    for (var i=0; i<groups.length; i++) {
-      group=groups[i];
-      grouplabel=autoreact.fieldLabel(group);
-      menuclass="autoleftmenubutton";
-      if (this.props.menuselectname) {
-        if (this.props.menuselectname==group["name"]) menuclass+=" autoleftmenubuttonSelected";
-      } else if (i==0) menuclass+=" autoleftmenubuttonSelected";                 
-      groupBlocks.push(
-        ce("li", {key:i+group["name"], 
-                      className: menuclass,
-                      onClick:this.handleButton.bind
-                        (this,group["viewname"],group["viewmenu"],group["restriction"],group["component"],group["name"])}, 
-          ce("a", {href: "#", className: "autoleftmenubuttonlink"},
-              grouplabel)
-        )
-      );    
-    }
-    return (
-      ce("ul",{className:"autoleftmenu"},
-        groupBlocks
-      )      
-    );     
-  }
-};
-
-//"main_resource_parent_id={main_resource_id}&service_type=mitteelektrooniline_teenus"
-
-
-
-function getRefKeyFromRestriction(r) {
-  var pairs,keyvals,i,kval;
-  if (!r) return [];
-  pairs=r.split("&");
-  for (i=0; i<pairs.length; i++) {
-    keyvals=pairs[i].split("=");
-    if (!keyvals || keyvals.length!=2) continue;      
-    kval=keyvals[1];
-    if (kval.charAt(0)=="{" && kval.charAt(kval.length-1)=="}") {
-      return keyvals[0];
-    }             
-  }
-  return null;  
-}
-
-
-//var AutoAlertMessage = React.createClass({
 class AutoAlertMessage extends React.Component{  
   //displayName: 'AutoAlertMessage',
   render() {
@@ -770,8 +644,8 @@ class AutoAlertMessage extends React.Component{
     if (!this.props.alert || !this.props.alertmessage) return ce("span",{},"");
     else return ( 
       ce("div", 
-        {id: "alertmessage", className: (this.props.internal ? autoreact.internalAlertClass : autoreact.alertClass)+
-         " "+autoreact.alertClassPrefix+type},
+        {id: "alertmessage", className: (this.props.internal ? autoform.internalAlertClass : autoform.alertClass)+
+         " "+autoform.alertClassPrefix+type},
         this.props.alertmessage)
     );
   }
@@ -796,9 +670,6 @@ function getSortParams(viewdef,proposedkey,proposeddown) {
 // ====== exported functions =========
 
 export {
-  AutoResource,
   AutoMain,
-  getObjectLabel,
-  AutoLeftMenu,
   AutoAlertMessage
 }  

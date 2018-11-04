@@ -132,3 +132,5 @@ var rawInit = {
 };
 
 var xcount=0;
+
+console.log("data0");

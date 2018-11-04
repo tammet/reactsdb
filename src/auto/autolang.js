@@ -7,9 +7,6 @@
 
 */
 
-import * as autoutils from './autoutils.js';
-
-
 // ====== module start =========
 
 // ====== exported functions =========

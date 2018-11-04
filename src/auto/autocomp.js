@@ -3,7 +3,7 @@
  */
  
 import * as autoutils from './autoutils.js';
-import * as autoreact from './autoreact.js';
+import * as autolist from './autolist.js';
 
 var ce = React.createElement;
 
@@ -61,7 +61,7 @@ class IskeSecurityLevelWidget extends React.Component{
     if (this.props.arrayIndex || this.props.arrayIndex===0) properties["data-arrayindex"]=this.props.arrayIndex;
     return (
       ce("div", {},
-        autoreact.fieldValue(securityLevel,this.props.field),
+        autoform.fieldValue(securityLevel,this.props.field),
         ce("input", properties))
     );
   }
