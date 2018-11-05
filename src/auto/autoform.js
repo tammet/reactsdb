@@ -51,30 +51,35 @@ class AutoFormGroupMenu extends React.Component{
     //console.log("groups");
     //console.log(groups);
     if (!groups) return "";
-    var group,grouplabel,groupclass;
+    var group,grouplabel,groupclass,linkclass;
     var groupBlocks = [];
     for (var i=0; i<groups.length; i++) {
       group=groups[i];
       if (this.props.usedgroups && this.props.usedgroups.indexOf(group.name)<0) 
          continue;
       grouplabel=fieldLabel(group);
-      if (this.props.groupname==group["name"]) groupclass="active";
-      else groupclass="";
+      if (this.props.groupname==group["name"]) {
+        groupclass="nav-item";
+        linkclass="nav-link active autotablink";
+      }  else {
+        groupclass="nav-item";
+        linkclass="nav-link autotablink";
+      }  
       groupBlocks.push(
         /*
         ce("button", {key:i+group["name"], className: "btn btn-default btn-sm",                      
                       onClick:this.handleButton.bind(this,group["name"])}, grouplabel)
         */ 
-        ce("li", {key:autoutils.makeKey("groupmenu"+i), className: groupclass,                      
+        ce("li", {key:autoutils.makeKey("groupmenu"+i), className: groupclass,                     
                       onClick:this.handleButton.bind(this,group["name"])}, 
-          ce("a", {href: "#", className: "autotablink"}, grouplabel)
+          ce("a", {href: "#", className: linkclass,  role: "tab"}, grouplabel)
         )
       );    
     }
     if (viewdef["groupMenu"]=="left") groupclass="autoFormGroupLeftMenu";
     else groupclass="nav nav-tabs autoFormGroupMenuTabs";
     return (
-      ce("ul",{className:groupclass},
+      ce("ul",{className:groupclass, "role":"tablist"},
         groupBlocks
       )      
     );     
