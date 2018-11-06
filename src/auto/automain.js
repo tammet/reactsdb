@@ -454,18 +454,7 @@ class AutoMain extends React.Component{
           )
           : ""              
         ),
-        */
-        /*    
-        ((leftmenu) ?
-          ce("div", {className: "row singleResourseTitleRow"},
-            ce("h1",{className: "resourcetitle"}, label)
-          )  
-          :
-          ce("div", {className: "row listTitleRow"}, //{className: "row listTitleRow"},
-            ce("h1",{className: "listresourcetitle"}, label) 
-          )  
-        ),
-        */      
+        */     
         (this.state.op=="list" ? ce(AutoAlertMessage,{alert:this.state.alert, alertmessage: this.state.alertmessage}) : ""),    
         ce("div", {className: "row"},
           ((simplemenu) ?            

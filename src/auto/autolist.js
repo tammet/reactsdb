@@ -274,11 +274,6 @@ class AutoListButtons extends React.Component{
   render() {
     var i,extfilter=false,help=false;
     var canimport=false;
-    if (this.props.viewdef && this.props.viewdef.object &&
-        _.indexOf(["infosystem","area", "classifier", "xmlasset"], // "service", 
-                  this.props.viewdef.object)>=0) {
-      canimport=true;
-    }
     if (this.props.viewdef.help) help=langelem(this.props.viewdef.help);    
     extfilter=_.some(this.props.viewdef["fields"],function(v) {return (v["extfilter"]===true) });  
     if (!this.props.searchbutton && !extfilter) {
@@ -609,9 +604,7 @@ class AutoRow extends React.Component{
     var isbutton;
     if (autoutils.hasNegativeProperty(this.props.viewdef,"onclick")) {
       rowclass="datarowNoclick"; 
-    }
-    //rowclass+=" redtext"
-    //console.log(this.props.viewdef.name);    
+    }    
     for (var i=0, field=""; i<fields.length; i++) {
       field=fields[i];
       isbutton=false;
@@ -637,10 +630,7 @@ class AutoRow extends React.Component{
         val=datarow[field.name];
         if (i==0) val=String(autoform.fieldValue(val,field,"list"));
         else val=fieldListValue(autoform.fieldValue(val,field,"list"),this.props.viewdef);       
-      }  
-      
-      if (field.name=="msg_type" && (val=="man down" || val=="need assistance")) rowclass+=" redtext";
-      
+      }        
       dataCols.push(ce("td", {key:"data_col"+i, 
                               className: ((dataCols.length<1) ?  
                                           "datacol" : 

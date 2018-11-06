@@ -505,8 +505,6 @@ body {
 import * as autoapi from './auto/autoapi.js';
 import * as init from './init.js';
 
-console.log("page0");
-
 document.getElementById("loginbutton").addEventListener("click", 
   function() {
     autoapi.getLogin('password_login',
@@ -523,7 +521,7 @@ document.getElementById("menudata").addEventListener("click",
 document.getElementById("menulogout").addEventListener("click", 
   function() { init.menuLogOut(); return false }    
 );
-console.log("page1");
+
 </script> 
 
 

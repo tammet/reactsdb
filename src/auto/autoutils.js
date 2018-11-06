@@ -353,7 +353,7 @@ function makeListJoinParams(ctxt,op,viewdef,stateparams) {
 }
 
 function replaceWithJoin(viewdef,joinparams,data,op) {
-  console.log("replaceWithJoin op "+op);
+  //console.log("replaceWithJoin op: "+op);
   var i,j,rec,join,jobj={},jpart,jfld,jnewfld,keys,key,tmp,modkey,flds;
   if (!data || !joinparams || !viewdef) return data;
   flds=viewdef.fields;
@@ -371,7 +371,7 @@ function replaceWithJoin(viewdef,joinparams,data,op) {
     } 
     */ 
   }
-  console.log(jobj);
+  //console.log(jobj);
   if (_.isArray(data) && !_.isEmpty(data)) {
     for(i=0;i<data.length;i++) {
       rec=data[i];
@@ -406,9 +406,9 @@ function replaceWithJoin(viewdef,joinparams,data,op) {
 }
 
 function viewHasReftyped(viewdef,key) {
-  console.log("viewHasReftyped");
-  console.log(viewdef);
-  console.log(key);
+  //console.log("viewHasReftyped");
+  //console.log(viewdef);
+  //console.log(key);
   var i,flds=viewdef.fields;
   for(i=0;i<flds.length;i++) {
     var fld=flds[i];
@@ -451,12 +451,6 @@ function orderFields(fields) {
 }
 
 // -------- kind of viewdef and fieldtype, their subtypes -----------
-
-function versionableViewdef(viewdef) {
-  if (!viewdef) return false;
-  if (_.indexOf(["infosystem","service","classifier","xmlasset"],viewdef.name)>=0) return true;
-  return false;  
-}  
 
 function isRefType(type) {
   if (!type) return false;
@@ -676,7 +670,6 @@ export {
   orderFields,
   fieldShow,
 
-  versionableViewdef,
   isRefType,
   isSearchType,
   isIdType,

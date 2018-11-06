@@ -67,7 +67,6 @@ function makeWizardHtml(rules,prefill) {
     html+=autolang.trans(txt);
     //html+="<p>+"+JSON.stringify(prefill)+"<p>";
     case1='';    
-    prefill.infosystem_status="asutamine_sisestamisel";
     $("#wizardModalInput").val(JSON.stringify(prefill));
     html+="<p><button onclick='"+case1+"' class='btn btn-primary btn-sm trans' ";
     html+=" data-dismiss='modal'>"

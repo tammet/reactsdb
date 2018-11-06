@@ -7,6 +7,7 @@
 import * as autoutils from './autoutils.js';
 import * as autoformdata from './autoformdata.js';
 import * as autolang from './autolang.js';
+import * as autofldsrch from './autofldsrch.js';
 
 // ====== module start =========
 
@@ -74,7 +75,7 @@ function convertParams(params) {
     }  
     else res[key]=params[key];
   }  
-  console.log(res);
+  //console.log(res);
   return res;
 }
   
@@ -389,6 +390,9 @@ function makeListNextState(oldstate,changes) {
 
 var getCountedListSingle = function(ctxt,op,viewdef,stateparams) {
   autoutils.debug("calling getCountedListSingle");
+
+  console.log("getCountedListSingle");
+  
   var tmp,key,nextstate;
   var offset=stateparams["offset"];
   var limit=stateparams["limit"];
@@ -492,8 +496,10 @@ var getListSingle = function(ctxt,op,viewdef,stateparams) {
 // normally we have got a count first; pureList gets data
 
 var getPureList = function(ctxt,op,viewdef,stateparams) {
-  //autoutils.debug("calling getPureList with stateparams['count'] "+stateparams['count']);
-  //console.log(stateparams.filterdata);
+
+  autoutils.debug("calling getPureList with stateparams['count'] "+stateparams['count']);
+  console.log(stateparams.filterdata);
+
   var tmp,key,nextstate;
   var offset=stateparams["offset"];
   var limit=stateparams["limit"];
@@ -779,39 +785,31 @@ var deleteRecord = function(ctxt,op,viewdef,id,parent) {
 // used for filling a dynamic search box as the user types in a name
 
 var dynamicSearchByName = function(ctxt,type,name,kind,idfldname,namefldname, filter) {
-  //autoutils.debug("calling dynamicSearchByName");
-  //autoutils.debug(kind,idfldname,namefldname);
-  var params;
-  var url=getApiUrl(ctxt);
-  if (globalState.dummyData) url=url+globalState.listDummyData;   
-  //autoutils.debug(url);  
-  params={"op":"get", "token":autoutils.getAuthToken()};
+  //console.log("calling dynamicSearchByName");
+  //console.log(type,name,kind,idfldname,namefldname); 
+  var type = autoutils.refSubtype(type);
+  var viewdef = autoutils.getViewdef(type);
+  var params={};
+  var viewdef = autoutils.getViewdef(type);
+  params.path=viewdef.table;
+  params.op="countedlist";  
+  params.token=autoutils.getAuthToken();
   params.offset=0;
   params.limit=globalState.dynamicSearchLimit;
-  params.sortkey=namefldname;
+  params.sort=namefldname;
   params.fields=[idfldname,namefldname];  
   params.filter=[[namefldname,"ilike","%"+name+"%"]];
-  if (false) {
-  }  else {
-    // Find table from template:
-    var type = autoutils.refSubtype(type);
-    var viewdef = autoutils.getViewdef(type);
-
-    params.filter.push(["kind","=",kind]);
-    if (filter !== undefined && filter !== null && filter.length > 0) {
-      for (var i = 0; i < filter.length; i++)
-        params.filter.push(filter[i]);
-    }
-    params.path="db/" + viewdef.table;
-  }  
+  var url=getApiUrl(ctxt,viewdef)+"/"+params.path; 
   params=convertParams(params);
+  var urlparams=toUrlParams(params);
+  if (urlparams) url=url+"?"+urlparams;
   $.ajax({    
     url: url,
     dataType: 'json',
-    type: POST,
+    type: "GET",
     contentType:"application/json; charset=utf-8",
-    data: JSON.stringify(params),
-    cache: false,
+    //data: JSON.stringify(params),
+    //cache: false,
     timeout: globalState.ajaxTimeout,
     success: function(data) {    
       if (isErrResponse(data)) {
@@ -819,12 +817,16 @@ var dynamicSearchByName = function(ctxt,type,name,kind,idfldname,namefldname, fi
         ctxt.simpleUpdateState({op:"edit", action: null, 
           alert:"danger", alertmessage: autolang.trans(data["errmsg"])});
       } else {                                               
-        //autoutils.debug("dynamicSearchByName got data");
-        //autoutils.debug(data);
+        data=data.resourceCollection;          
+        //var count=data["@total"];
+        data=data.resource;
         ctxt.handleDynamicOptionsChange(data);        
       }  
     }.bind(ctxt),
     error: function(xhr, status, err) {
+      console.log("err caught:");
+      console.log(err);
+
        var alertmessage;
       if (err==="timeout") 
         alertmessage=autolang.trans("Error: timeout"); 

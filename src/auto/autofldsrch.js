@@ -31,7 +31,7 @@ class AutoEditFldSearch extends React.Component{
     } else {
       fldtype=fld.type;
     }
-    var kind=getDynamicSearchKind(fldtype);
+    var kind="";
     var idfldname=getDynamicSearchIdFieldName(fldtype);
     var namefldname=getDynamicSearchNameFieldName(fldtype);
     var searchValue;
@@ -61,7 +61,6 @@ class AutoEditFldSearch extends React.Component{
   // called when search field content is changed by user
   handleDynamicSearchFieldChange(e) { 
     var input=e.target;
-    //console.log(" handleDynamicSearchFieldChange changed to: "+input.value)
     if (autoutils.isSearchType(this.state.fldtype)) {
       if (!input.value) {
         if (this.props.show=="searchfield")
@@ -74,26 +73,24 @@ class AutoEditFldSearch extends React.Component{
           var restriction = this.state.fld.restriction;
           filter=autoformdata.makeFilterFromRestriction(restriction,this.props.datarow);
         }
-
         autoapi.dynamicSearchByName(this,this.state.fldtype,input.value,
                                   this.state.kind,this.state.idfldname,
                                   this.state.namefldname, filter);
       }        
     }        
-    //console.log("cp2: "+input.value+","+this.state.value);
     if (input.value=="") this.setState({value:""});
     this.setState({searchValue:input.value});  
-  }  
+  }    
   /*
-  handleKey:function(e) {
+  handleKey(e) {
     var index=this.state.selindex;
     if (index===null) index=3;
     else if (index<this.state.dynoptions.length-1) index++;
     console.log("handleKey");
     console.log(e);
     this.setState({selindex:index});
-  },
-  */  
+  } 
+  */
   // callback for the api for dynamic options search      
   handleDynamicOptionsChange(options) {
     this.setState({dynoptions: options});

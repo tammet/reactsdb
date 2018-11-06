@@ -84,13 +84,6 @@ function makeFilterParams(ctxt,op,viewdef) {
     cond=[name,"<=",value];
     filter.push(cond);
   }
-  // extend filter to exclude old versions
-  if (viewdef.name=="infosystem") {
-    date=localDateTimeISO(); //!!!
-    //cond=["end_date","null_or_>",date]; 
-    cond=["end_date","isnull",""];
-    filter.push(cond);    
-  }
   // select fields to ask for
   deffields=viewdef["fields"];
   if (deffields) {
@@ -138,8 +131,7 @@ function makeSaveParams(ctxt,viewdef,parent) {
   //debug(parent);
   var args={},save=[];
   var emptyInputs=$.find("[data-save='empty']");
-  var valueInputs=$.find("[data-save='value']");
-  var table="infosystem";      
+  var valueInputs=$.find("[data-save='value']");      
   args={"op":"get","path": autoutils.getPath(viewdef)};
   token=autoutils.getAuthToken();
   if (token) args["token"]=token; 

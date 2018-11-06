@@ -36,9 +36,6 @@ class AutoView extends React.Component{
     super(props);
     this.handleButton = this.handleButton.bind(this);
     this.handleFormGroupButton = this.handleFormGroupButton.bind(this);
-
-    console.log("AutoView constructor ends");
-
   }
   handleButton(statechange) {
     this.props.callback(statechange);
@@ -168,12 +165,7 @@ class AutoViewButtons extends React.Component{
     var expurl=autoapi.getApiUrl()+"/resource/"+this.props.rowid;
     var canexport=false;
     var canrefresh=false;
-    if (this.props.viewdef.autorefresh) canrefresh=true;
-    if (this.props.viewdef && this.props.viewdef.object &&
-        _.indexOf(["infosystem", "service", "area", "classifier", "xmlasset"],
-                  this.props.viewdef.object)>=0) {
-      canexport=true;
-    }  
+    if (this.props.viewdef.autorefresh) canrefresh=true; 
     if (autoutils.hasNegativeProperty(this.props.viewdef,"edit")) {
       return ce("div",{},"");
     } else {
@@ -191,11 +183,7 @@ class AutoViewButtons extends React.Component{
                           trans("Hide empty fields"))
               :
               ce("button", {className: secondaryBtnClass, onClick:this.handleViewAllFields, type: "button"},
-                          trans("Show empty fields")) )),
-          ((autoutils.versionableViewdef(this.props.viewdef) && canedit) ?
-            ce("button", {className: secondaryBtnClass, onClick:this.handleNewVersion, type: "button"}, trans("Create a new version"))
-            :
-            ""),         
+                          trans("Show empty fields")) )),     
           ((this.props.viewdef && this.props.viewdef.approve && canedit)
             ?
             ce("button", {className: secondaryBtnClass, onClick:this.handleSubmitApproval, type: "button"}, trans("Submit to approval"))
