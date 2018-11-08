@@ -127,8 +127,8 @@ def main():
       handle_err("no input received")  
   if not parseres:
     handle_err("no table definitions found")
-  print("parseres:")  
-  print(json.dumps(parseres,indent=True))
+  #print("parseres:")  
+  #print(json.dumps(parseres,indent=True))
   js=convert_to_json(parseres)
   if js:
     print(js)
@@ -204,6 +204,7 @@ def parse_col_line(s):
   rpl=rpl.replace(")"," ) ")  
   rpl=rpl.replace("--"," -- ")
   spl=rpl.split()
+  if not spl: return None
   if spl[0]=="--": return None # pure comment line
   if spl[0].lower() in ["check","constraint","unique"]: return None
   if len(spl)>1 and spl[0].lower() in ["primary","foreign"] and spl[1].lower()=="key": 
