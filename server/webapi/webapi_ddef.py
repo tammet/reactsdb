@@ -11,7 +11,7 @@
 
 # ====== basic data/view description ========
 
-dtables={
+viewdefs={
 
     "users": # all users are here: both admins and mobile users
     {

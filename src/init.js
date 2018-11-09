@@ -48,8 +48,21 @@ function initMain() {
 };
 
 function loadTemplates() {
+  var lst=[]
+  if (!viewdefs) {
+    console.error("viewdefs value missing");
+    return;
+  }
+  Object.keys(viewdefs).forEach(function(key,index) {
+    // key: the name of the object key
+    // index: the ordinal position of the key within the object 
+    lst.push(viewdefs[key])
+  });
+  console.log("viewdefs",lst);
+  viewdefs=lst;
   globalState.viewdefs=viewdefs;     
 }
+
 
 function setupHistory() {
   // handle back button

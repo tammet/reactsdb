@@ -83,14 +83,14 @@ def authenticate(req):
 def get_userdata_by_username(req,username):
   #print("cp get_userdata_by_username called req.table: ",req.table)
   (tmp_table,tmp_filter,tmp_sort,tmp_start,tmp_count,tmp_fields)=(req.table,req.filter,req.sort,req.start,req.count,req.fields)
-  req.table="people"
+  req.table="users"
   req.filter=["username","=",username]
   req.sort=None
   req.start=0
   req.count=100
   req.rfields=None
   req.fields=None
-  userdata=get_list_data(req,"people",False) # no group check   
+  userdata=get_list_data(req,"users",False) # no group check   
   #print("userdata:",userdata)
   (req.table,req.filter,req.sort,req.start,req.count,req.fields)=(tmp_table,tmp_filter,tmp_sort,tmp_start,tmp_count,tmp_fields)   
   #(req.table,req.filter)=(tmp_table,tmp_filter)
@@ -123,7 +123,7 @@ def authorize(req,table,op):
   # from here on not a superuser  
   #print("authorize(req,table,op)",table,op)
   if table in ["sessions"]: return False
-  if table in ["people"] and op in ["count","list","countedlist","update"]:
+  if table in ["users"] and op in ["count","list","countedlist","update"]:
     #print("req.keyval,req.userid:",req.keyval,req.userid)
     if req.keyval==str(req.userid):
       # user lists or updates own account data
@@ -174,9 +174,9 @@ def handle_password_login(req):
     givenpassword=req.stdparams["password"]
     # get user by given username (no pwd check yet)    
     #userdata=get_user_by_username(req,username)
-    req.table="people"
+    req.table="users"
     req.filter=["username","=",username]
-    userdata=get_list_data(req,"people",False)    
+    userdata=get_list_data(req,"users",False)    
     #print("userdata:",userdata)
     req.table=None
     req.filter=None      
@@ -207,7 +207,7 @@ def handle_password_login(req):
     # create a new session storing the sid
     session=create_login_session(req,sid,username,None)
     # update user last login time
-    req.table="people"
+    req.table="users"
     if is_known_field(req,"last_login"):
       update_user_login_time(req,username)
     req.table=None

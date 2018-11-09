@@ -11,6 +11,6 @@ from email.mime.text import MIMEText # for email
 from .webapi_auth import *
 from .webapi_model import *
 from .webapi_common import *
-from .viewdefs import *
+from .webapi_viewdefs import *
 
   

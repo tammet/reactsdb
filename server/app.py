@@ -9,7 +9,7 @@ from webapi.webapi_ctrl import *
 from webapi.webapi_auth import *
 from webapi.webapi_special import *
 from webapi.webapi_common import *
-from webapi.viewdefs import *
+from webapi.webapi_viewdefs import *
 
 # change static dir and set configfile path
 current_dir = os.path.dirname(os.path.realpath(__file__))

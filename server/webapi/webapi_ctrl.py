@@ -11,7 +11,7 @@ from .webapi_auth import *
 from .webapi_special import *
 from .webapi_model import *
 from .webapi_common import *
-from .viewdefs import *
+from .webapi_viewdefs import *
 
 #import cgi, cgitb
 #cgitb.enable(format='text')
