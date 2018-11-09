@@ -1,8 +1,6 @@
-(function(exports) {
+viewdefs = {
 
-var viewdefs = [
-
-    // "users": no "groupMenu" set, differently from tabbed_users below
+    "users": 
     {
     "name" : "users",
     "table" : "users",
@@ -40,7 +38,6 @@ var viewdefs = [
          "group":"fancy",
          "help": "- A: active, D: deleted, W: waiting for activation "},
       {"name":"scores", "type":"string", "listShow":0, "filter":0, "group":"other", "help": " jsonb yet unknown structure for storing scores"},
-      //{"name":"extra jsonb", "type":"string", "listShow":0, "filter":0, "help": " jsonb yet unknown structure for storing additional information"},
       {"name":"instid", "type":"string", "listShow":0, "filter":0, "group":"other", "help": " last installation textual id"},
       {"name":"activity_at", "type":"date", "listShow":0, "filter":0, "group":"fancy", "help": " last major user activity time (not all requests update this)"},
       {"name":"created_at", "type":"datetime", "listShow":1, "filter":1, "group":"other"},
@@ -49,7 +46,7 @@ var viewdefs = [
     ]  
    },   
 
-    // "tabbed_users": there is  "groupMenu": "tabs" set!
+    "tabbed_users": 
     {
       "name" : "tabbed users",
       "table" : "users",
@@ -72,7 +69,6 @@ var viewdefs = [
         {"name":"address", "type":"string", "listShow":0, "filter":0, "editWidget":"textarea", "group":"fancy"},
         {"name":"locationid", "type":"ref:locations", "listShow":0, "filter":0, "group":"fancy"},        
         {"name":"country", "type":"string", "listShow":0, "filter":0, "group":"other"},
-          // "type":"array:string"}, 
         {"name":"lang", "label": "Language", "type":"string", "listShow":0, "filter":0,
           "values":["est","eng"], "group":"fancy", "filter":1},
         {"name":"remarks", "type":"string", "listShow":0, "filter":0, "group":"fancy",
@@ -88,7 +84,6 @@ var viewdefs = [
            "group":"fancy",
            "help": "- A: active, D: deleted, W: waiting for activation "},
         {"name":"scores", "type":"string", "listShow":0, "filter":0, "group":"other", "help": " jsonb yet unknown structure for storing scores"},
-        //{"name":"extra jsonb", "type":"string", "listShow":0, "filter":0, "help": " jsonb yet unknown structure for storing additional information"},
         {"name":"instid", "type":"string", "listShow":0, "filter":0, "group":"other", "help": " last installation textual id"},
         {"name":"activity_at", "type":"date", "listShow":0, "filter":0, "group":"fancy", "help": " last major user activity time (not all requests update this)"},
         {"name":"created_at", "type":"datetime", "listShow":1, "filter":1, "group":"other"},
@@ -97,7 +92,7 @@ var viewdefs = [
       ]  
      },   
 
-   // "locations": # all identified locations, small and large
+   "locations": 
     {
     "name" : "locations",
     "table" : "locations",  
@@ -138,7 +133,7 @@ var viewdefs = [
     ]  
    }, 
 
-   // "checkins": # all checkins of users without added data, except ratings
+   "checkins": 
     {
     "name" : "checkins",
     "table" : "checkins",  
@@ -148,7 +143,6 @@ var viewdefs = [
     "fields" : [  
       {"name":"id", "type":"integer", "auto":1, "edit":0, "addShow":0,"listShow":1,"filter":1}, 
       {"name":"locationid", "type":"ref:locations", "listShow":1, "filter":1, "help": " location which is described"},
-      //{"name":"userid", "type":"integer", "listShow":1, "filter":1, "help": " user id who sent this info "},
       {"name":"userid", "type":"ref:users", "listShow":0, "filter":1, "help": " userid who sent this info "},
       {"name":"users.fullname", "type":"of:userid", "edit":0, "listShow":1, "filter":1, "help": " user name who sent this info "},
       {"name":"users.password", "type":"of:userid", "edit":0, "listShow":1, "filter":1, "help": "password of the user"},
@@ -158,7 +152,7 @@ var viewdefs = [
     ]  
    }, 
 
-   // "sessions": # used only if/when login sessions needed
+   "sessions":
     {
     "name" : "sessions",
     "table" : "sessions",  
@@ -173,7 +167,7 @@ var viewdefs = [
     ]  
    },
 
-     // "menulocations": # all identified locations without a menu and a different layout
+     "menulocations": 
      {
       "name" : "menulocations",
       "table" : "locations",  
@@ -220,12 +214,7 @@ var viewdefs = [
         {"name":"updated_at", "type":"datetime", "listShow":0, "filter":0},
         {"name":"updated_by", "type":"string", "listShow":0, "filter":0, "help": " username or systemname creating/updating"}
       ]  
-     }, 
+     } 
 
-]   
-  
-   
-exports.viewdefs = viewdefs;
-if (window) window.viewdefs = viewdefs;
+}
 
-})(typeof exports === 'undefined'? this.viewdefs = {} : exports);

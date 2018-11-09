@@ -317,7 +317,7 @@ def sqlstr(s):
 
 def convert_to_json(parseres):
   # the next line outpust assignment of json to a variable
-  res="dtables={\n"
+  res="viewdefs={\n"
   tablecount=len(parseres)
   tablenr=0
   for table in parseres:
@@ -408,6 +408,7 @@ def get_namefield(fields,tablename):
 def field_to_json(field,fieldnr,fieldcount,spaces):
   if not field: return None
   if not ("name" in field): return None
+  isautokey=False  # determined later 
   breaklen=80 # comment formatted on a separate line if total strlen is longer
   fs=""
   name=field["name"]    
@@ -424,7 +425,7 @@ def field_to_json(field,fieldnr,fieldcount,spaces):
     ts=None  
   if ts=="string" and "typequalifier" in field and type(field["typequalifier"]==int):
     fs+=""", "length":%s""" % (field["typequalifier"])
-  if "primarykey" in field and field["primarykey"]:
+  if "primarykey" in field and field["primarykey"]:   
     fs+=""", "key":1"""  
   if "default" in field:
     df=field["default"]
@@ -432,10 +433,11 @@ def field_to_json(field,fieldnr,fieldcount,spaces):
     if dt==int:
       fs+=""", "default":%d""" % df
     elif dt==float:      
-      fs+=""", "default"":%f""" % df
+      fs+=""", "default":%f""" % df
     elif dt==str:      
-      fs+=""", "default"":%s""" % jstr(df)
+      fs+=""", "default":%s""" % jstr(df)
     elif dt==list and df and df[0]=="nextval": # NB! setting auto:1 and edit:0 for default nextval()
+      isautokey=True
       fs+=""", "default":"DEFAULT\""""
       fs+=""", "auto":1"""
       fs+=""", "edit":0"""
@@ -445,7 +447,9 @@ def field_to_json(field,fieldnr,fieldcount,spaces):
       fs+=""", "edit":0"""
     elif dt==list and df and type(df[0])=="str":
       fs+=""", "default":%s""" % jstr(dt[0])
-  
+  if "notnull" in field and field["notnull"]:
+    fs+=""", "mustFill":1"""
+
   #"""
   #"key" : "id",      
   #"refField" : "id",
@@ -455,7 +459,7 @@ def field_to_json(field,fieldnr,fieldcount,spaces):
   fs2="" # second line, initially empty
   if not server_only:     
     # next block goes on the second line
-    if auto_groups or auto_order or auto_filter!=None or auto_list!=None:
+    if auto_groups or auto_order or auto_filter!=None or auto_list!=None or isautokey:
       # new line
       fs+=",\n"+spaces
     if auto_groups and fieldcount>auto_group_column_limit:
@@ -466,7 +470,10 @@ def field_to_json(field,fieldnr,fieldcount,spaces):
     if auto_order:
       nr=(fieldnr+1)*10
       if fs2: fs2+=", "
-      fs2+="""\"order":%d""" % nr
+      fs2+="""\"order":%d""" % nr       
+    if isautokey: # automatic key fields should not show/send value from addform
+      if fs2: fs2+=", "
+      fs2+="""\"addShow":0"""
     if auto_filter!=None:
       if fs2: fs2+=", "
       fs2+="""\"filter":%x""" % auto_filter

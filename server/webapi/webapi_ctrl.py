@@ -11,7 +11,7 @@ from .webapi_auth import *
 from .webapi_special import *
 from .webapi_model import *
 from .webapi_common import *
-from .webapi_ddef import *
+from .viewdefs import *
 
 #import cgi, cgitb
 #cgitb.enable(format='text')
@@ -23,9 +23,9 @@ def ctrl_main(configfile,inmethod=None,inparams=None,subpath=None,headers=None,c
   req=Request() 
 
   conf=get_conf(req,configfile)
-
+  print("viewdefs",viewdefs)
   req.clientip=clientip
-  req.dtables=dtables # from api_ddef
+  req.dtables=viewdefs # from viewdefs.py
   req.count=req.max_rows # set default
   if type(inparams)== dict and "op" in inparams and inparams["op"]=="gwreport":
     # handle raw posted report
@@ -296,7 +296,7 @@ def dispatch(req):
   if req.table=="messages":
     handle_messages(req)
   elif req.op=='count':                  
-    if req.table in dtables:
+    if req.table in req.dtables:
       handle_count(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")    
@@ -313,7 +313,7 @@ def dispatch(req):
       handle_reports_list(req,req.table)
     elif req.table=="events":
       handle_events_list(req,req.table)    
-    elif req.table in dtables:
+    elif req.table in req.dtables:
       handle_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")   
@@ -328,14 +328,14 @@ def dispatch(req):
       handle_reports_counted_list(req,req.table)  
     elif req.table=="events":
       handle_events_counted_list(req,req.table)   
-    elif req.table in dtables:
+    elif req.table in req.dtables:
       handle_counted_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")      
   elif req.op=='update':
     #if req.table=='users':
     #  handle_update_users(req)
-    if req.table in dtables:
+    if req.table in req.dtables:
       handle_update(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")         
@@ -344,7 +344,7 @@ def dispatch(req):
     #  handle_add_users(req)   
     if req.op_modifier=="image" and req.inparams["data"][0]:
       handle_add_image(req, req.inparams["data"][0]) 
-    elif req.table in dtables:
+    elif req.table in req.dtables:
       handle_add(req,req.table)     
     else:
       handle_error(req,4,"unknown table parameter") 
@@ -353,7 +353,7 @@ def dispatch(req):
     #  handle_delete_users(req)  
     if req.op_modifier=="image":
       handle_delete_image(req, req.inparams["data"][0])
-    elif req.table in dtables:
+    elif req.table in req.dtables:
       handle_delete(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")       

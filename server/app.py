@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import sys,cgi,psycopg2,string,time,os,types
 import signal,datetime,logging
@@ -9,7 +9,7 @@ from webapi.webapi_ctrl import *
 from webapi.webapi_auth import *
 from webapi.webapi_special import *
 from webapi.webapi_common import *
-from webapi.webapi_ddef import *
+from webapi.viewdefs import *
 
 # change static dir and set configfile path
 current_dir = os.path.dirname(os.path.realpath(__file__))

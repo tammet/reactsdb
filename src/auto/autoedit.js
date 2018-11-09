@@ -133,6 +133,7 @@ class AutoEditFld extends React.Component{
 
   constructor(props) {
     super(props);
+    //console.log("this.props.value:",this.props.value);
     this.state = {value:this.props.value}; //, searchValue: "", dynoptions:null};
     this.handleChange = this.handleChange.bind(this);
     this.handleFileChange = this.handleFileChange.bind(this);
@@ -168,7 +169,16 @@ class AutoEditFld extends React.Component{
     }
     // change visible field locally
     if (input.getAttribute("data-type")==="json") {
-      this.setState({value:JSON.parse(input.value)});
+      this.setState({value:input.value});
+      /*
+      var tmp;
+      try {
+        tmp=JSON.parse(input.value);
+      } catch (err) {
+        tmp=input.value;
+      }  
+      this.setState({value:tmp});
+      */
     } else {
       this.setState({value:input.value});
     }  
@@ -340,11 +350,13 @@ class AutoEditFld extends React.Component{
     } else { 
       // default case
       if (fldtype==="json") {
-        value=JSON.stringify(value);
+        if (value===null) value="";
+        else value=value; //JSON.stringify(value);
         widget="textarea";        
       }  
       var widgetparams={type:"text", className:cssclass, name:name, value:value, "data-type": fldtype,                               
                        "data-save":'value', onChange:this.handleChange};
+      //console.log("widgetparams1:",widgetparams);
       if (autoid) widgetparams.id=autoid;                       
       if (fldtype==="json") widgetparams["data-encoding"]="json";                
       if (widgetparams.value===null) widgetparams.value="";                       
@@ -354,6 +366,8 @@ class AutoEditFld extends React.Component{
       if (this.props.id) widgetparams["id"]=this.props.id;                       
       if (this.props.className) widgetparams["className"]=this.props.className;
       if (widget==="url") widget="input";
+      //console.log("widget:",widget);
+      //console.log("widgetparams2:",widgetparams);
       raw=ce(widget, widgetparams);                            
     }       
     // finally, embed the field (regardless of type) into help

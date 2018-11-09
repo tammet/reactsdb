@@ -298,7 +298,7 @@ def get_list_data(req,table,groupcheck=True):
       else:
         fldset+=table+"."+name
   qs="select "+fldset  
-  #select users.id,users.username,locations.name from users left join locations on users.locationid=locations.id where users.id>0;
+  #select people.id,people.username,locations.name from people left join locations on people.locationid=locations.id where people.id>0;
   joins=parse_joins(req,req.join,table)
 
   if table=="nodes":
@@ -562,11 +562,11 @@ def db_get_sessioninfo_row(req,sid):
   return db_get_row(req,qs,(sid,))
 
 def old_db_get_sessioninfo_row(req,sid):
-  qs="""select users.id,users.username,users.first_name,users.last_name,users.level,
-        users.lang, users.uistyle, -- users.fullname, users.service, 
+  qs="""select people.id,people.username,people.first_name,people.last_name,people.level,
+        people.lang, people.uistyle, -- people.fullname, people.service, 
         sessions.token
-        from users,sessions where 
-        users.status='A' and users.username=sessions.username and sessions.sid=%s
+        from people,sessions where 
+        people.status='A' and people.username=sessions.username and sessions.sid=%s
         and sessions.endts>=now()""" 
   return db_get_row(req,qs,(sid,))
   
@@ -592,14 +592,14 @@ def get_user_by_username(req,username):
   created_by varchar(100), -- username or systemname creating
   updated_at timestamptz default now(), -- when was last updated
   updated_by varchar(100) -- username or systemname last updating
-       from users where status='A' and username=%s"""
+       from people where status='A' and username=%s"""
   return db_get_rows_with_colnames(req,qs,(username,),0,1)
 
 
 def db_get_userlogininfo_row(req,username,password):
   qs="""select id,username,first_name,last_name,level,lang,uistyle, -- fullname,service,email 
-        from users where status='A' and username=%s and password=%s"""
-  #qs="select id,username,firstname,lastname from users where username='tanel.tammet@gmail.com' and password='abc'"
+        from people where status='A' and username=%s and password=%s"""
+  #qs="select id,username,firstname,lastname from people where username='tanel.tammet@gmail.com' and password='abc'"
   return db_get_row(req,qs,(username,password))   
 
 
@@ -637,7 +637,7 @@ def create_login_session(req,sid,username,token):
 def update_user_login_time(req,username):
   try:
     cur=req.con.cursor()
-    qs="update users set last_login=now() where username=%s"      
+    qs="update people set last_login=now() where username=%s"      
     cur.execute(qs,(username,))
     req.con.commit()
     cur.close()
@@ -741,7 +741,7 @@ def parse_filter(req,filter,table,extraflds=None):
 
 # ----------------- parsing joins -----------------------------
 # origfield,tablename1.table1joinfield,tablename1.tablej1newfield,
-#select users.id,users.username,locations.name from users left join locations on users.locationid=locations.id where users.id>1;
+#select people.id,people.username,locations.name from people left join locations on people.locationid=locations.id where people.id>1;
 
 
 def parse_joins(req,joins,table):
@@ -875,14 +875,14 @@ def groupclause(req,table,field,writeflag=False):
     if "name" in fld and fld["name"]==req.group_field: 
       found=True
       break
-  if not found and not table in ["networks","users"]:
+  if not found and not table in ["networks","people"]:
     return ""   
   # group field present  
   if not req.usergroups: return " () " # no access anywhere
-  if table=="users":
+  if table=="people":
     # block writing
     if writeflag: return " () "
-    # special case for filtering out users
+    # special case for filtering out people
     grplst=[]
     if req.user_read_groups: grplst+=req.user_read_groups
     if req.user_write_groups: grplst+=req.user_write_groups
