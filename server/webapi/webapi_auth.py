@@ -9,9 +9,9 @@ import smtplib # for email
 from email.mime.text import MIMEText # for email
 from configparser import SafeConfigParser
 
-from .webapi_model import *
-from .webapi_common import *
-#from .webapi_ddef import *
+from webapi_model import *
+from webapi_common import *
+from webapi_ddef import *
 
 # ---- authentication and authorization ---- 
 
@@ -83,14 +83,14 @@ def authenticate(req):
 def get_userdata_by_username(req,username):
   #print("cp get_userdata_by_username called req.table: ",req.table)
   (tmp_table,tmp_filter,tmp_sort,tmp_start,tmp_count,tmp_fields)=(req.table,req.filter,req.sort,req.start,req.count,req.fields)
-  req.table="people"
+  req.table="users"
   req.filter=["username","=",username]
   req.sort=None
   req.start=0
   req.count=100
   req.rfields=None
   req.fields=None
-  userdata=get_list_data(req,"people",False) # no group check   
+  userdata=get_list_data(req,"users",False) # no group check   
   #print("userdata:",userdata)
   (req.table,req.filter,req.sort,req.start,req.count,req.fields)=(tmp_table,tmp_filter,tmp_sort,tmp_start,tmp_count,tmp_fields)   
   #(req.table,req.filter)=(tmp_table,tmp_filter)
@@ -104,7 +104,7 @@ def get_userdata_by_username(req,username):
 def get_set_req_groups(req):    
   groups=db_get_usergroups(req,req.userid,req.usergroup,req.usertopgroup)
   req.usernamedgroups=groups
-  req.usergroups= req.usergroups=[x["id"] for x in groups]
+  req.usergroups=map(lambda x: x["id"], groups)
 
 
 def authorize_show(req,table,op):
@@ -123,7 +123,7 @@ def authorize(req,table,op):
   # from here on not a superuser  
   #print("authorize(req,table,op)",table,op)
   if table in ["sessions"]: return False
-  if table in ["people"] and op in ["count","list","countedlist","update"]:
+  if table in ["users"] and op in ["count","list","countedlist","update"]:
     #print("req.keyval,req.userid:",req.keyval,req.userid)
     if req.keyval==str(req.userid):
       # user lists or updates own account data
@@ -166,17 +166,17 @@ def handle_password_login(req):
   """ Assumes username, salt and password fields in db where
       password in db must be hashlib.sha512(<givenpwd>+<user salt in db>).hexdigest()
   """
-  if not ("username" in req.stdparams and "password" in req.stdparams and 
-           req.stdparams["username"] and req.stdparams["password"]):
+  if not (req.stdparams.has_key("username") and req.stdparams.has_key("password") and 
+          req.stdparams["username"] and req.stdparams["password"]):
     handle_error(req,3,'username and password parameters missing') 
   else:    
     username=req.stdparams["username"]
     givenpassword=req.stdparams["password"]
     # get user by given username (no pwd check yet)    
     #userdata=get_user_by_username(req,username)
-    req.table="people"
+    req.table="users"
     req.filter=["username","=",username]
-    userdata=get_list_data(req,"people",False)    
+    userdata=get_list_data(req,"users",False)    
     #print("userdata:",userdata)
     req.table=None
     req.filter=None      
@@ -189,11 +189,7 @@ def handle_password_login(req):
       handle_error(req,2,'authentication failure','no salt or password found in db')
     salt=str(userdata["salt"])
     storedpassword=str(userdata["password"])
-
-    #passhash=hashlib.sha512(givenpassword+salt).hexdigest()  # python2
-    passhash=hashlib.sha512((givenpassword+salt).encode('utf-8')).hexdigest()   # python3
-    
-
+    passhash=hashlib.sha512(givenpassword+salt).hexdigest()
     #print("salt:",salt)
     #print("storedpassword:",storedpassword)  
     #print("passhash      :",passhash)
@@ -207,7 +203,7 @@ def handle_password_login(req):
     # create a new session storing the sid
     session=create_login_session(req,sid,username,None)
     # update user last login time
-    req.table="people"
+    req.table="users"
     if is_known_field(req,"last_login"):
       update_user_login_time(req,username)
     req.table=None
