@@ -126,8 +126,13 @@ function setMenuBackgrounds(selected) {
   var i,el;
   for (var i=0; i<topMenuList.length; i++) {   
     el=topMenuList[i];
-    if (el==selected) $("#menu"+selected).css("background-color","#666"); 
-    else $("#menu"+el).css("background-color","#333");
+    if (el==selected) {
+      $("#menu"+selected).css("background-color","#666"); 
+      $("#menu"+selected).addClass("active");
+    } else {
+      $("#menu"+el).css("background-color","#343a40");
+      $("#menu"+el).removeClass("active");
+    }  
   }  
 }
 
