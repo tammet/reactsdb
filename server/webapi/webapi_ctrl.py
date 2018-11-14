@@ -293,55 +293,29 @@ def cgi_parse_std_parameters(req):
 
 
 def dispatch(req):  
-  if req.table=="messages":
-    handle_messages(req)
-  elif req.op=='count':                  
+  if req.op=='count':                  
     if req.table in req.dtables:
       handle_count(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")    
-  elif req.op=='list':            
-    #if req.table=='users':
-    #  handle_list_users(req)  
-    #elif req.table=='sessions':
-    #  handle_list_sessions(req)      
+  elif req.op=='list':                
     if req.op_modifier=="image":
       handle_show_image(req,req.inparams["data"][0])
-    elif req.table=="networks":
-      handle_networks_list(req,req.table)  
-    elif req.table=="reports":
-      handle_reports_list(req,req.table)
-    elif req.table=="events":
-      handle_events_list(req,req.table)    
     elif req.table in req.dtables:
       handle_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")   
-  elif req.op=='countedlist':       
-    #if req.table=='users':
-    #  handle_counted_list_users(req)  
-    #elif req.table=='sessions':
-    #  handle_counted_list_sessions(req)  
-    if req.table=="networks":
-      handle_networks_counted_list(req,req.table)        
-    elif req.table=="reports":
-      handle_reports_counted_list(req,req.table)  
-    elif req.table=="events":
-      handle_events_counted_list(req,req.table)   
-    elif req.table in req.dtables:
+  elif req.op=='countedlist':        
+    if req.table in req.dtables:
       handle_counted_list(req,req.table)       
     else:
       handle_error(req,4,"unknown table parameter")      
   elif req.op=='update':
-    #if req.table=='users':
-    #  handle_update_users(req)
     if req.table in req.dtables:
       handle_update(req,req.table)  
     else:
       handle_error(req,4,"unknown table parameter")         
-  elif req.op=='add':
-    #if req.table=='users':
-    #  handle_add_users(req)   
+  elif req.op=='add': 
     if req.op_modifier=="image" and req.inparams["data"][0]:
       handle_add_image(req, req.inparams["data"][0]) 
     elif req.table in req.dtables:
@@ -349,8 +323,6 @@ def dispatch(req):
     else:
       handle_error(req,4,"unknown table parameter") 
   elif req.op=='delete':
-    #if req.table=='users':
-    #  handle_delete_users(req)  
     if req.op_modifier=="image":
       handle_delete_image(req, req.inparams["data"][0])
     elif req.table in req.dtables:
